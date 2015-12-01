@@ -26,4 +26,16 @@ public class ProcessRunnerTest {
 
         processRunner.waitFor();
     }
+
+    @Test
+    public void testCancelProcess() throws IOException, InterruptedException, ExecutionException {
+        final ProcessRunner processRunner = new ProcessRunner();
+        final Consumer<String> consumer = mock(Consumer.class);
+
+        processRunner.start(new String[]{"sleep", "1"}, consumer);
+
+        processRunner.cancel();
+
+        processRunner.waitFor();
+    }
 }
