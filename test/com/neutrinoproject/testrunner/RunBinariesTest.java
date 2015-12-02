@@ -29,16 +29,12 @@ public class RunBinariesTest {
     public void testRunNeutrinoBinary() throws IOException, ExecutionException, InterruptedException {
         final ProcessRunner processRunner = new ProcessRunner();
         processRunner.start(new String[]{getPathToResource("neutrino"), "--gtest_list_tests"}, printHandler);
-
-        processRunner.waitFor();
     }
 
     @Test
     public void testRunNeutralinoBinary() throws IOException, ExecutionException, InterruptedException {
         final ProcessRunner processRunner = new ProcessRunner();
         processRunner.start(new String[]{getPathToResource("neutralino")}, printHandler);
-
-        processRunner.waitFor();
     }
 
     private String getPathToResource(final String resourceName) {

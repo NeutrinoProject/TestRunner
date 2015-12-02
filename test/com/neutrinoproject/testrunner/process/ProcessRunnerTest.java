@@ -4,7 +4,6 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
-import java.util.function.Consumer;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
@@ -27,7 +26,7 @@ public class ProcessRunnerTest {
         verify(handler, timeout(timeoutMillis)).onOutLine(message);
         verify(handler).onExitCode(0);
 
-        processRunner.waitFor();
+//        processRunner.waitFor();
     }
 
     @Test
@@ -35,11 +34,10 @@ public class ProcessRunnerTest {
         final ProcessRunner processRunner = new ProcessRunner();
         final ProcessEventHandler handler = mock(ProcessEventHandler.class);
 
-        processRunner.start(new String[]{"sleep", "1"}, handler);
+        processRunner.start(new String[]{"sleep", "5"}, handler);
 
         processRunner.cancel();
-
-        processRunner.waitFor();
+        // TODO: What does this test check?
     }
 
     @Test
@@ -50,6 +48,6 @@ public class ProcessRunnerTest {
         processRunner.start(new String[]{"sleep", "-1"}, handler);
         verify(handler, timeout(timeoutMillis)).onExitCode(1);
 
-        processRunner.waitFor();
+//        processRunner.waitFor();
     }
 }
