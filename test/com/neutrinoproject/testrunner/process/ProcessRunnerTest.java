@@ -15,14 +15,17 @@ import static org.mockito.Mockito.verify;
  */
 public class ProcessRunnerTest {
 
+    private final int timeoutMillis = 100;
+
     @Test
     public void testRunEcho() throws IOException, InterruptedException, ExecutionException {
         final ProcessRunner processRunner = new ProcessRunner();
         final String message = "From another process with love";
-        final Consumer<String> consumer = mock(Consumer.class);
+        final ProcessEventHandler handler = mock(ProcessEventHandler.class);
 
-        processRunner.start(new String[]{"echo", message}, consumer);
-        verify(consumer, timeout(100)).accept(message);
+        processRunner.start(new String[]{"echo", message}, handler);
+        verify(handler, timeout(timeoutMillis)).onOutLine(message);
+        verify(handler).onExitCode(0);
 
         processRunner.waitFor();
     }
@@ -30,11 +33,22 @@ public class ProcessRunnerTest {
     @Test
     public void testCancelProcess() throws IOException, InterruptedException, ExecutionException {
         final ProcessRunner processRunner = new ProcessRunner();
-        final Consumer<String> consumer = mock(Consumer.class);
+        final ProcessEventHandler handler = mock(ProcessEventHandler.class);
 
-        processRunner.start(new String[]{"sleep", "1"}, consumer);
+        processRunner.start(new String[]{"sleep", "1"}, handler);
 
         processRunner.cancel();
+
+        processRunner.waitFor();
+    }
+
+    @Test
+    public void testNonZeroExitCode() throws IOException, InterruptedException, ExecutionException {
+        final ProcessRunner processRunner = new ProcessRunner();
+        final ProcessEventHandler handler = mock(ProcessEventHandler.class);
+
+        processRunner.start(new String[]{"sleep", "-1"}, handler);
+        verify(handler, timeout(timeoutMillis)).onExitCode(1);
 
         processRunner.waitFor();
     }

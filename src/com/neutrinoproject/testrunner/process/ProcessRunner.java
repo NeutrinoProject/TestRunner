@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.function.Consumer;
 
@@ -15,7 +14,7 @@ public class ProcessRunner {
     private Process process;
     private FutureTask<Void> processFuture;
 
-    public void start(final String[] command, final Consumer<String> outputConsumer) throws IOException {
+    public void start(final String[] command, final ProcessEventHandler handler) throws IOException {
 //        isProcessRunning.set(true);
         process = new ProcessBuilder(command).redirectErrorStream(true).start();
 
@@ -23,11 +22,11 @@ public class ProcessRunner {
             try (final BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                 String line;
                 while ((line = in.readLine()) != null) {
-                    outputConsumer.accept(line);
+                    handler.onOutLine(line);
                 }
 
                 final int exitCode = process.waitFor();
-                // TODO: Notify about exit code.
+                handler.onExitCode(exitCode);
             } catch (IOException e) {
                 // TODO: Handle this exception.
                 e.printStackTrace();
