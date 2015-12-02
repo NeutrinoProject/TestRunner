@@ -1,13 +1,20 @@
 package com.neutrinoproject.testrunner.ui;
 
+import com.neutrinoproject.testrunner.TestOutputParser;
+
 import javax.swing.*;
 import java.awt.event.ActionEvent;
+import java.util.Collection;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.stream.Stream;
+
+import static com.neutrinoproject.testrunner.ui.ProcessRunnerModel.*;
 
 /**
  * Created by btv on 02.12.15.
  */
-public class MainForm {
+public class MainForm implements Observer {
     private JFrame mainFrame;
     private JPanel mainPanel;
 
@@ -25,11 +32,12 @@ public class MainForm {
     private JLabel statusLabel;
 
     private JProgressBar progressBar;
-
-//    private final Model model = new Model();
+    
     private final ProcessRunnerModel model = new ProcessRunnerModel();
 
     public void initForm() {
+        model.addObserver(this);
+
         mainFrame = new JFrame();
 
         mainFrame.setContentPane(mainPanel);
@@ -71,5 +79,26 @@ public class MainForm {
         Stream.of(loadTestBinaryButton, runAllTestsButton, runSelectedButton, runFailedButton)
                 .forEach(b -> b.setEnabled(!loading));
         stopButton.setEnabled(loading);
+    }
+
+    private void onTestCasesLoaded() {
+        final Collection<TestOutputParser.TestCase> testCases = model.getTestCases();
+        rawOutputArea.append(testCases.toString());
+        rawOutputArea.append("\n");
+        rawOutputArea.setCaretPosition(rawOutputArea.getDocument().getLength());
+        setLoadingProgressForButtons(false);
+        statusLabel.setText("Binary loaded");
+    }
+
+    @Override
+    public void update(final Observable o, final Object arg) {
+        final Event event = (Event) arg;
+        switch (event) {
+            case TEST_CASES_LOADED:
+                SwingUtilities.invokeLater(this::onTestCasesLoaded);
+                break;
+            case ERROR:
+                break;
+        }
     }
 }
