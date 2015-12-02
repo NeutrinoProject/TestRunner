@@ -4,13 +4,12 @@ import com.neutrinoproject.testrunner.TestOutputParser;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.util.Collection;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.stream.Stream;
-
-import static com.neutrinoproject.testrunner.ui.ProcessRunnerModel.*;
 
 /**
  * Created by btv on 02.12.15.
@@ -49,6 +48,8 @@ public class MainForm implements Observer {
         mainFrame.setLocationRelativeTo(null);
 //        mainFrame.pack();
 
+        rawOutputArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, rawOutputArea.getFont().getSize()));
+
         loadTestBinaryButton.addActionListener(this::onLoadTestBinary);
         runAllTestsButton.addActionListener(this::onRunAllTests);
         stopButton.addActionListener(this::onStop);
@@ -74,6 +75,7 @@ public class MainForm implements Observer {
     private void onRunAllTests(final ActionEvent event) {
         setLoadingProgress(true);
         statusLabel.setText("Running tests...");
+        rawOutputArea.setText(null);
 
         model.startAllTests();
     }
@@ -123,7 +125,7 @@ public class MainForm implements Observer {
 
     @Override
     public void update(final Observable o, final Object arg) {
-        final Event event = (Event) arg;
+        final ProcessRunnerModel.Event event = (ProcessRunnerModel.Event) arg;
         switch (event.type) {
             case TEST_CASES_LOADED:
                 SwingUtilities.invokeLater(this::onTestCasesLoaded);
