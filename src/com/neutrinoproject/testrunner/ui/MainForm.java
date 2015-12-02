@@ -4,7 +4,6 @@ import com.neutrinoproject.testrunner.TestOutputParser;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableModel;
 import java.awt.event.ActionEvent;
 import java.util.Collection;
 import java.util.Observable;
@@ -51,6 +50,7 @@ public class MainForm implements Observer {
 //        mainFrame.pack();
 
         loadTestBinaryButton.addActionListener(this::onLoadTestBinary);
+        runAllTestsButton.addActionListener(this::onRunAllTests);
         stopButton.addActionListener(this::onStop);
     }
 
@@ -64,23 +64,31 @@ public class MainForm implements Observer {
         if (returnVal == JFileChooser.APPROVE_OPTION) {
             final String path = fileChooser.getSelectedFile().getPath();
             testBinaryPathField.setText(path);
-            setLoadingProgressForButtons(true);
+            setLoadingProgress(true);
             statusLabel.setText("Loading binary...");
 
             model.startReadingBinary(path);
         }
     }
 
+    private void onRunAllTests(final ActionEvent event) {
+        setLoadingProgress(true);
+        statusLabel.setText("Running tests...");
+
+        model.startAllTests();
+    }
+
     private void onStop(final ActionEvent event) {
         model.stopAllProcesses();
-        setLoadingProgressForButtons(false);
+        setLoadingProgress(false);
         statusLabel.setText("Stopped");
     }
 
-    private void setLoadingProgressForButtons(boolean loading) {
+    private void setLoadingProgress(boolean loading) {
         Stream.of(loadTestBinaryButton, runAllTestsButton, runSelectedButton, runFailedButton)
                 .forEach(b -> b.setEnabled(!loading));
         stopButton.setEnabled(loading);
+        progressBar.setValue(loading ? progressBar.getMinimum() : progressBar.getMaximum());
     }
 
     private void onTestCasesLoaded() {
@@ -98,16 +106,33 @@ public class MainForm implements Observer {
         testOutputTable.getColumnModel().getColumn(2).setPreferredWidth(400);
         testOutputTable.getColumnModel().getColumn(2).setWidth(400);
 
-        setLoadingProgressForButtons(false);
+        setLoadingProgress(false);
         statusLabel.setText("Binary loaded");
+    }
+
+    private void onOutLine(final String line) {
+        rawOutputArea.append(line);
+        rawOutputArea.append("\n");
+        rawOutputArea.setCaretPosition(rawOutputArea.getDocument().getLength());
+    }
+
+    private void onTestRunFinished() {
+        setLoadingProgress(false);
+        statusLabel.setText("Ready");
     }
 
     @Override
     public void update(final Observable o, final Object arg) {
         final Event event = (Event) arg;
-        switch (event) {
+        switch (event.type) {
             case TEST_CASES_LOADED:
                 SwingUtilities.invokeLater(this::onTestCasesLoaded);
+                break;
+            case OUT_LINE:
+                SwingUtilities.invokeLater(() -> onOutLine((String) event.data));
+                break;
+            case TEST_RUN_FINISHED:
+                SwingUtilities.invokeLater(this::onTestRunFinished);
                 break;
             case ERROR:
                 break;

@@ -10,5 +10,4 @@ public interface TestEventHandler {
 
     void onTestState(TestRunState testState, String testCaseName, String testName);
 
-    void onExitCode(int exitCode);
 }

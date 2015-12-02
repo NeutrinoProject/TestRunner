@@ -25,10 +25,27 @@ public class ProcessRunnerModel extends Observable {
     private String testBinaryPath;
     private ProcessRunner processRunner;
 
+    public static class Event {
+        public enum Type {
+            TEST_CASES_LOADED,
 
-    public enum Event {
-        TEST_CASES_LOADED,
-        ERROR,
+            OUT_LINE,
+            TEST_RUN_FINISHED,
+
+            ERROR,
+        }
+
+        public final Type type;
+        public final Object data;
+
+        public Event(final Type type) {
+            this(type, null);
+        }
+
+        public Event(final Type type, final Object data) {
+            this.type = type;
+            this.data = data;
+        }
     }
 
     public ProcessRunnerModel() {
@@ -45,6 +62,10 @@ public class ProcessRunnerModel extends Observable {
         executorService.submit(this::readBinary);
     }
 
+    public void startAllTests() {
+        executorService.submit(this::runAllTests);
+    }
+
     public void stopAllProcesses() {
         processRunner.cancel();
     }
@@ -56,7 +77,6 @@ public class ProcessRunnerModel extends Observable {
         processRunner = new ProcessRunner();
         try {
             processRunner.start(new String[]{testBinaryPath, "--gtest_list_tests"}, new ProcessEventHandler() {
-                //            processRunner.start(new String[]{"ping", "ya.ru"}, new ProcessEventHandler() {
                 @Override
                 public void onOutLine(final String line) {
                     lines.add(line);
@@ -70,13 +90,52 @@ public class ProcessRunnerModel extends Observable {
                             testCases.set(testOutputParser.parseTestList(lines));
                             System.out.println(testCases.get());
                             setChanged();
-                            notifyObservers(Event.TEST_CASES_LOADED);
+                            notifyObservers(new Event(Event.Type.TEST_CASES_LOADED));
                         } catch (ParseException e) {
                             e.printStackTrace();
                         }
                     } else {
                         // TODO: Handle the exit code.
                     }
+                }
+            });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void runAllTests() {
+        final TestOutputParser testOutputParser = new TestOutputParser(new TestEventHandler() {
+            @Override
+            public void onOutLine(final String line) {
+                System.out.println(line);
+                setChanged();
+                notifyObservers(new Event(Event.Type.OUT_LINE, line));
+            }
+
+            @Override
+            public void onErrLine(final String line) {
+                System.out.println(line);
+            }
+
+            @Override
+            public void onTestState(final TestRunState testState, final String testCaseName, final String testName) {
+                System.out.println(" **** " + testCaseName);
+            }
+        });
+
+        processRunner = new ProcessRunner();
+        try {
+            processRunner.start(new String[]{testBinaryPath}, new ProcessEventHandler() {
+                @Override
+                public void onOutLine(final String line) {
+                    testOutputParser.parseString(line);
+                }
+
+                @Override
+                public void onExitCode(final int exitCode) {
+                    setChanged();
+                    notifyObservers(new Event(Event.Type.TEST_RUN_FINISHED));
                 }
             });
         } catch (IOException e) {
