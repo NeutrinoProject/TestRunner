@@ -3,6 +3,8 @@ package com.neutrinoproject.testrunner.ui;
 import com.neutrinoproject.testrunner.TestOutputParser;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableModel;
 import java.awt.event.ActionEvent;
 import java.util.Collection;
 import java.util.Observable;
@@ -32,7 +34,7 @@ public class MainForm implements Observer {
     private JLabel statusLabel;
 
     private JProgressBar progressBar;
-    
+
     private final ProcessRunnerModel model = new ProcessRunnerModel();
 
     public void initForm() {
@@ -44,7 +46,7 @@ public class MainForm implements Observer {
         mainFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
         mainFrame.setTitle("TestRunner");
-        mainFrame.setSize(800, 600);
+        mainFrame.setSize(600, 600);
         mainFrame.setLocationRelativeTo(null);
 //        mainFrame.pack();
 
@@ -83,9 +85,19 @@ public class MainForm implements Observer {
 
     private void onTestCasesLoaded() {
         final Collection<TestOutputParser.TestCase> testCases = model.getTestCases();
-        rawOutputArea.append(testCases.toString());
-        rawOutputArea.append("\n");
-        rawOutputArea.setCaretPosition(rawOutputArea.getDocument().getLength());
+        final String[] columnNames = {"R", "State", "Test Name"};
+        final DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0);
+        for (final TestOutputParser.TestCase testCase : testCases) {
+            tableModel.addRow(new Object[]{">", "", testCase.name});
+            for (final String testName : testCase.tests) {
+                tableModel.addRow(new Object[]{">", "", "  " + testName});
+            }
+        }
+
+        testOutputTable.setModel(tableModel);
+        testOutputTable.getColumnModel().getColumn(2).setPreferredWidth(400);
+        testOutputTable.getColumnModel().getColumn(2).setWidth(400);
+
         setLoadingProgressForButtons(false);
         statusLabel.setText("Binary loaded");
     }
