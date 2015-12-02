@@ -34,9 +34,9 @@ public class ProcessRunnerTest {
         final ProcessRunner processRunner = new ProcessRunner();
         final ProcessEventHandler handler = mock(ProcessEventHandler.class);
 
-        processRunner.start(new String[]{"sleep", "5"}, handler);
+//        processRunner.start(new String[]{"sleep", "5"}, handler);
 
-        processRunner.cancel();
+//        processRunner.cancel();
         // TODO: What does this test check?
     }
 
