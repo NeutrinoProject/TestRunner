@@ -18,16 +18,16 @@ import java.util.stream.Stream;
  */
 public class ProcessRunnerModel extends Observable {
     private final ExecutorService executorService;
-    private final AtomicReference<Collection<TestOutputParser.TestCase>> testCases;
+    private final AtomicReference<Collection<String>> testCases;
     // TODO: Use more efficient data structure.
-    private final List<TestState> testStates = Collections.synchronizedList(new ArrayList<TestState>());
+    private final List<TestState> testStates = Collections.synchronizedList(new ArrayList<>());
 
     private String testBinaryPath;
     private ProcessRunner processRunner;
 
     public static class TestState {
         private final String fullName;
-        private final List<String> outLines = Collections.synchronizedList(new ArrayList<String>());
+        private final List<String> outLines = Collections.synchronizedList(new ArrayList<>());
         private TestRunState state;
 
         public TestState(final String fullName) {
@@ -84,7 +84,7 @@ public class ProcessRunnerModel extends Observable {
         testCases = new AtomicReference<>();
     }
 
-    public Collection<TestOutputParser.TestCase> getTestCases() {
+    public Collection<String> getTestCases() {
         return testCases.get();
     }
 
@@ -120,12 +120,7 @@ public class ProcessRunnerModel extends Observable {
                 System.out.println(testCases.get());
 
                 testStates.clear();
-                for (final TestOutputParser.TestCase testCase : testCases.get()) {
-                    testCase.tests.stream()
-                            .map(name -> testCase.name + "." + name)
-                            .map(TestState::new)
-                            .forEach(testStates::add);
-                }
+                testCases.get().stream().map(TestState::new).forEach(testStates::add);
 
                 setChanged();
                 notifyObservers(new Event(Event.Type.TEST_CASES_LOADED));

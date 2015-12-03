@@ -28,17 +28,17 @@ public class TestOutputParserTest {
         verify(handler, times(2)).onOutLine(someText);
 
         parser.parseString("[ RUN      ] Neutrino.HasMass");
-        verify(handler).onTestState(TestRunState.STARTED, "Neutrino", "HasMass");
+        verify(handler).onTestState(TestRunState.RUNNING, "Neutrino", "HasMass");
 
         // Starting a new test before finishing the previous one has no effect.
         parser.parseString("[ RUN      ] Neutrino.HasMass");
-        verify(handler, times(1)).onTestState(TestRunState.STARTED, "Neutrino", "HasMass");
+        verify(handler, times(1)).onTestState(TestRunState.RUNNING, "Neutrino", "HasMass");
 
         parser.parseString("[       OK ] Neutrino.HasMass (0 ms)");
         verify(handler).onTestState(TestRunState.OK, "Neutrino", "HasMass");
 
         parser.parseString("[ RUN      ] Neutrino.IsStable");
-        verify(handler).onTestState(TestRunState.STARTED, "Neutrino", "IsStable");
+        verify(handler).onTestState(TestRunState.RUNNING, "Neutrino", "IsStable");
 
         parser.parseString("[  FAILED  ] Neutrino.IsStable (0 ms)");
         verify(handler).onTestState(TestRunState.FAILED, "Neutrino", "IsStable");
@@ -57,12 +57,11 @@ public class TestOutputParserTest {
                         "UrcaProcess.\n" +
                         "  InvolvesNeutrino\n";
 
-        final Collection<TestOutputParser.TestCase> neutrinoActual =
+        final Collection<String> neutrinoActual =
                 parser.parseTestList(Arrays.asList(neutrinoTestListString.split("\n")));
-        final Collection<TestOutputParser.TestCase> neutrinoExpected = Arrays.asList(
-                new TestOutputParser.TestCase("Neutrino", Arrays.asList("HasMass", "IsStable")),
-                new TestOutputParser.TestCase("UrcaProcess", Arrays.asList("InvolvesNeutrino"))
-        );
+
+        final Collection<String> neutrinoExpected =
+                Arrays.asList("Neutrino.HasMass", "Neutrino.IsStable", "UrcaProcess.InvolvesNeutrino");
         assertEquals(neutrinoExpected, neutrinoActual);
 
         final String neutralinoTestListString =
@@ -70,16 +69,14 @@ public class TestOutputParserTest {
                         "Neutralino.\n" +
                         "  Exists\n";
 
-        final Collection<TestOutputParser.TestCase> neutralinoActual =
+        final Collection<String> neutralinoActual =
                 parser.parseTestList(Arrays.asList(neutralinoTestListString.split("\n")));
-        final Collection<TestOutputParser.TestCase> neutralinoExpected = Arrays.asList(
-                new TestOutputParser.TestCase("Neutralino", Arrays.asList("Exists"))
-        );
+        final Collection<String> neutralinoExpected = Arrays.asList("Neutralino.Exists");
         assertEquals(neutralinoExpected, neutralinoActual);
     }
 
     @Test(expected=ParseException.class)
-    public void testIndexOutOfBoundsException() throws ParseException {
+    public void testParseException() throws ParseException {
         final String garbage =
                 "Running main() from gtest_main.cc\n" +
                         "Neutralino\n" +
