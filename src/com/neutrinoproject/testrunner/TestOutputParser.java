@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
  * Created by btv on 30.11.15.
  */
 public class TestOutputParser {
-    private final Pattern testRunOutputPattern = Pattern.compile("^\\[(.{10})\\] (\\w+)\\.(\\w+).*");
+    private final Pattern testRunOutputPattern = Pattern.compile("^\\[(.{10})\\] (\\w+\\.\\w+).*");
     private final Pattern testListTestCasePattern = Pattern.compile("^(\\w+)\\.$");
     private final Pattern testListTestNamePattern = Pattern.compile("^  (\\w+)$");
     private final TestEventHandler testEventHandler;
@@ -25,7 +25,7 @@ public class TestOutputParser {
             final Matcher matcher = testRunOutputPattern.matcher(line);
             if (matcher.find()) {
                 final String outputType = matcher.group(1);
-                final String testName = matcher.group(2) + "." + matcher.group(3);
+                final String testName = matcher.group(2);
 
                 switch (outputType) {
                     case " RUN      ":
@@ -79,9 +79,5 @@ public class TestOutputParser {
         }
 
         return result;
-    }
-
-    private String buildFullTestName(final String testCaseName, final String testName) {
-        return testCaseName + "." + testName;
     }
 }
