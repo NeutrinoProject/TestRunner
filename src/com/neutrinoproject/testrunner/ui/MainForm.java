@@ -1,6 +1,7 @@
 package com.neutrinoproject.testrunner.ui;
 
 import com.neutrinoproject.testrunner.TestOutputParser;
+import com.neutrinoproject.testrunner.TestRunState;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -9,6 +10,7 @@ import java.awt.event.ActionEvent;
 import java.util.Collection;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
@@ -49,6 +51,7 @@ public class MainForm implements Observer {
 //        mainFrame.pack();
 
         rawOutputArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, rawOutputArea.getFont().getSize()));
+        runSelectedButton.setEnabled(false);
 
         loadTestBinaryButton.addActionListener(this::onLoadTestBinary);
         runAllTestsButton.addActionListener(this::onRunAllTests);
@@ -92,10 +95,10 @@ public class MainForm implements Observer {
     }
 
     private void setLoadingProgress(boolean loading) {
-        Stream.of(loadTestBinaryButton, runAllTestsButton, runSelectedButton, runFailedButton)
+        Stream.of(loadTestBinaryButton, runAllTestsButton, runFailedButton)
                 .forEach(b -> b.setEnabled(!loading));
         stopButton.setEnabled(loading);
-        progressBar.setValue(loading ? progressBar.getMinimum() : progressBar.getMaximum());
+//        progressBar.setValue(loading ? progressBar.getMinimum() : progressBar.getMaximum());
     }
 
     private void onTestCasesLoaded() {
@@ -103,9 +106,8 @@ public class MainForm implements Observer {
         final String[] columnNames = {"State", "Test Name"};
         final DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0);
         for (final TestOutputParser.TestCase testCase : testCases) {
-            tableModel.addRow(new Object[]{"", testCase.name});
             for (final String testName : testCase.tests) {
-                tableModel.addRow(new Object[]{"", "  " + testName});
+                tableModel.addRow(new Object[]{"", testCase.name + "." + testName});
             }
         }
 
@@ -123,13 +125,21 @@ public class MainForm implements Observer {
         rawOutputArea.setCaretPosition(rawOutputArea.getDocument().getLength());
     }
 
+    private void onTestStateChanged(final String fullName) {
+        for (int i = 0; i < testOutputTable.getModel().getRowCount(); i++) {
+            if (testOutputTable.getModel().getValueAt(i, 1).equals(fullName)) {
+                final Optional<ProcessRunnerModel.TestState> testState = model.getTestState(fullName);
+                if (testState.isPresent()) {
+                    testOutputTable.getModel().setValueAt(testState.get().getState(), i, 0);
+                }
+                return;
+            }
+        }
+    }
+
     private void onTestRunFinished() {
         setLoadingProgress(false);
         statusLabel.setText("Done");
-    }
-
-    private void onTestStateChanged() {
-        // TODO: Implement.
     }
 
     @Override
@@ -143,7 +153,7 @@ public class MainForm implements Observer {
                 SwingUtilities.invokeLater(() -> onOutLine((String) event.data));
                 break;
             case TEST_STATE_CHANGED:
-                SwingUtilities.invokeLater(this::onTestStateChanged);
+                SwingUtilities.invokeLater(() -> onTestStateChanged((String) event.data));
                 break;
             case TEST_RUN_FINISHED:
                 SwingUtilities.invokeLater(this::onTestRunFinished);

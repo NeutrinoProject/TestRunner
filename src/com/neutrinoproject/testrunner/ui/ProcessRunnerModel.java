@@ -7,12 +7,11 @@ import com.neutrinoproject.testrunner.process.ProcessRunner;
 
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Observable;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 /**
  * Created by btv on 02.12.15.
@@ -20,9 +19,41 @@ import java.util.concurrent.atomic.AtomicReference;
 public class ProcessRunnerModel extends Observable {
     private final ExecutorService executorService;
     private final AtomicReference<Collection<TestOutputParser.TestCase>> testCases;
+    // TODO: Use more efficient data structure.
+    private final List<TestState> testStates = Collections.synchronizedList(new ArrayList<TestState>());
 
     private String testBinaryPath;
     private ProcessRunner processRunner;
+
+    public static class TestState {
+        private final String fullName;
+        private final List<String> outLines = Collections.synchronizedList(new ArrayList<String>());
+        private TestRunState state;
+
+        public TestState(final String fullName) {
+            this.fullName = fullName;
+        }
+
+        public TestRunState getState() {
+            return state;
+        }
+
+        public void setState(final TestRunState state) {
+            this.state = state;
+        }
+
+        public List<String> getOutLines() {
+            return outLines;
+        }
+
+        public void appendOutLine(final String line) {
+            outLines.add(line);
+        }
+
+        public String getFullName() {
+            return fullName;
+        }
+    }
 
     public static class Event {
         public enum Type {
@@ -57,6 +88,12 @@ public class ProcessRunnerModel extends Observable {
         return testCases.get();
     }
 
+    public Optional<TestState> getTestState(final String fullName) {
+        return testStates.stream()
+                .filter(testState -> testState.getFullName().equals(fullName))
+                .findFirst();
+    }
+
     public void startReadingBinary(final String testBinaryPath) {
         this.testBinaryPath = testBinaryPath;
         executorService.submit(this::readBinary);
@@ -81,6 +118,15 @@ public class ProcessRunnerModel extends Observable {
             if (exitCode == 0) {
                 testCases.set(testOutputParser.parseTestList(lines));
                 System.out.println(testCases.get());
+
+                testStates.clear();
+                for (final TestOutputParser.TestCase testCase : testCases.get()) {
+                    testCase.tests.stream()
+                            .map(name -> testCase.name + "." + name)
+                            .map(TestState::new)
+                            .forEach(testStates::add);
+                }
+
                 setChanged();
                 notifyObservers(new Event(Event.Type.TEST_CASES_LOADED));
             } else {
@@ -107,9 +153,14 @@ public class ProcessRunnerModel extends Observable {
             }
 
             @Override
-            public void onTestState(final TestRunState testState, final String testCaseName, final String testName) {
+            public void onTestState(final TestRunState state, final String testCaseName, final String testName) {
+                final String fullName = testCaseName + "." + testName;
+                testStates.stream()
+                        .filter(testState -> testState.getFullName().equals(fullName))
+                        .limit(1)
+                        .forEach(testState -> testState.setState(state));
                 setChanged();
-                notifyObservers(new Event(Event.Type.TEST_STATE_CHANGED, testState));
+                notifyObservers(new Event(Event.Type.TEST_STATE_CHANGED, fullName));
             }
         });
 
