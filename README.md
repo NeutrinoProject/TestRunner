@@ -4,11 +4,11 @@ _GUI for Google Test Famework_
 ## TODO
  - [ ] support standart output of Google Test binaries
   - [x] parse test output
-  - [ ] show test results in gui as they appear
+  - [x] show test results in gui as they appear
   - [ ] show test output per test
- - [ ] show states for test: Queued, Running, Failed, Ok
+ - [x] show states for test: Queued, Running, Failed, Ok
  - [ ] show overall result
- - [ ] implement an option to stop the process
+ - [x] implement an option to stop the process
  - [ ] implement an option to rerun failed tests
 
  - [ ] check the program on Windows
