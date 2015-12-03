@@ -3,7 +3,6 @@ package com.neutrinoproject.testrunner.ui;
 import com.neutrinoproject.testrunner.TestEventHandler;
 import com.neutrinoproject.testrunner.TestOutputParser;
 import com.neutrinoproject.testrunner.TestRunState;
-import com.neutrinoproject.testrunner.process.ProcessEventHandler;
 import com.neutrinoproject.testrunner.process.ProcessRunner;
 
 import java.io.IOException;
@@ -68,6 +67,7 @@ public class ProcessRunnerModel extends Observable {
     }
 
     public void stopAllProcesses() {
+        // FIXME: processRunner might be null if readBinary has not started yet.
         processRunner.cancel();
     }
 
@@ -77,30 +77,18 @@ public class ProcessRunnerModel extends Observable {
 
         processRunner = new ProcessRunner();
         try {
-            processRunner.start(new String[]{testBinaryPath, "--gtest_list_tests"}, new ProcessEventHandler() {
-                @Override
-                public void onOutLine(final String line) {
-                    lines.add(line);
-                    System.out.println(line);
-                }
-
-                @Override
-                public void onExitCode(final int exitCode) {
-                    if (exitCode == 0) {
-                        try {
-                            testCases.set(testOutputParser.parseTestList(lines));
-                            System.out.println(testCases.get());
-                            setChanged();
-                            notifyObservers(new Event(Event.Type.TEST_CASES_LOADED));
-                        } catch (ParseException e) {
-                            e.printStackTrace();
-                        }
-                    } else {
-                        // TODO: Handle the exit code.
-                    }
-                }
-            });
+            final int exitCode = processRunner.start(new String[]{testBinaryPath, "--gtest_list_tests"}, lines::add);
+            if (exitCode == 0) {
+                testCases.set(testOutputParser.parseTestList(lines));
+                System.out.println(testCases.get());
+                setChanged();
+                notifyObservers(new Event(Event.Type.TEST_CASES_LOADED));
+            } else {
+                // TODO: Handle the exit code.
+            }
         } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ParseException e) {
             e.printStackTrace();
         }
     }
@@ -127,18 +115,10 @@ public class ProcessRunnerModel extends Observable {
 
         processRunner = new ProcessRunner();
         try {
-            processRunner.start(new String[]{testBinaryPath}, new ProcessEventHandler() {
-                @Override
-                public void onOutLine(final String line) {
-                    testOutputParser.parseString(line);
-                }
-
-                @Override
-                public void onExitCode(final int exitCode) {
-                    setChanged();
-                    notifyObservers(new Event(Event.Type.TEST_RUN_FINISHED));
-                }
-            });
+            // TODO: Handle the exit code.
+            processRunner.start(new String[]{testBinaryPath}, testOutputParser::parseString);
+            setChanged();
+            notifyObservers(new Event(Event.Type.TEST_RUN_FINISHED));
         } catch (IOException e) {
             e.printStackTrace();
         }

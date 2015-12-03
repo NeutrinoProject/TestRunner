@@ -3,6 +3,7 @@ package com.neutrinoproject.testrunner.process;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.function.Consumer;
 
 /**
  * Created by btv on 01.12.15.
@@ -10,26 +11,22 @@ import java.io.InputStreamReader;
 public class ProcessRunner {
     private Process process;
 
-    public void start(final String[] command, final ProcessEventHandler handler) throws IOException {
+    public int start(final String[] command, final Consumer<String> outLineConsumer) throws IOException {
         process = new ProcessBuilder(command).redirectErrorStream(true).start();
 
         try (final BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
             String line;
             while ((line = in.readLine()) != null) {
-                handler.onOutLine(line);
+                outLineConsumer.accept(line);
             }
 
-            final int exitCode = process.waitFor();
-            handler.onExitCode(exitCode);
+            return process.waitFor();
         } catch (IOException e) {
             // TODO: Handle this exception.
             e.printStackTrace();
         } catch (InterruptedException ignore) {}
+        return -1;
     }
-
-//    public void waitFor() throws InterruptedException, ExecutionException {
-//        processFuture.get();
-//    }
 
     public void cancel() {
         process.destroy();
