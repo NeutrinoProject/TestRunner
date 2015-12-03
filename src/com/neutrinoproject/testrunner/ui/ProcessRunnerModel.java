@@ -148,25 +148,25 @@ public class ProcessRunnerModel extends Observable {
             }
 
             @Override
-            public void onTestState(final TestRunState state, final String testCaseName, final String testName) {
-                final String fullName = testCaseName + "." + testName;
+            public void onTestState(final TestRunState state, final String testName) {
                 testStates.stream()
-                        .filter(testState -> testState.getFullName().equals(fullName))
+                        .filter(testState -> testState.getFullName().equals(testName))
                         .limit(1)
                         .forEach(testState -> testState.setState(state));
                 setChanged();
-                notifyObservers(new Event(Event.Type.TEST_STATE_CHANGED, fullName));
+                notifyObservers(new Event(Event.Type.TEST_STATE_CHANGED, testName));
             }
         });
 
         processRunner = new ProcessRunner();
+        int exitCode = -1;
         try {
-            // TODO: Handle the exit code.
-            processRunner.start(new String[]{testBinaryPath}, testOutputParser::parseString);
+            exitCode = processRunner.start(new String[]{testBinaryPath}, testOutputParser::parseString);
             setChanged();
-            notifyObservers(new Event(Event.Type.TEST_RUN_FINISHED));
         } catch (IOException e) {
+            // TODO: Log the problem somehow.
             e.printStackTrace();
         }
+        notifyObservers(new Event(Event.Type.TEST_RUN_FINISHED, exitCode));
     }
 }

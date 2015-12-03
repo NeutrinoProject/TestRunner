@@ -8,6 +8,6 @@ public interface TestEventHandler {
 
     void onErrLine(String line);
 
-    void onTestState(TestRunState testState, String testCaseName, String testName);
+    void onTestState(TestRunState testState, String testName);
 
 }

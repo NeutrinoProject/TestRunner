@@ -28,20 +28,20 @@ public class TestOutputParserTest {
         verify(handler, times(2)).onOutLine(someText);
 
         parser.parseString("[ RUN      ] Neutrino.HasMass");
-        verify(handler).onTestState(TestRunState.RUNNING, "Neutrino", "HasMass");
+        verify(handler).onTestState(TestRunState.RUNNING, "Neutrino.HasMass");
 
         // Starting a new test before finishing the previous one has no effect.
         parser.parseString("[ RUN      ] Neutrino.HasMass");
-        verify(handler, times(1)).onTestState(TestRunState.RUNNING, "Neutrino", "HasMass");
+        verify(handler, times(1)).onTestState(TestRunState.RUNNING, "Neutrino.HasMass");
 
         parser.parseString("[       OK ] Neutrino.HasMass (0 ms)");
-        verify(handler).onTestState(TestRunState.OK, "Neutrino", "HasMass");
+        verify(handler).onTestState(TestRunState.OK, "Neutrino.HasMass");
 
         parser.parseString("[ RUN      ] Neutrino.IsStable");
-        verify(handler).onTestState(TestRunState.RUNNING, "Neutrino", "IsStable");
+        verify(handler).onTestState(TestRunState.RUNNING, "Neutrino.IsStable");
 
         parser.parseString("[  FAILED  ] Neutrino.IsStable (0 ms)");
-        verify(handler).onTestState(TestRunState.FAILED, "Neutrino", "IsStable");
+        verify(handler).onTestState(TestRunState.FAILED, "Neutrino.IsStable");
     }
 
     @Test
@@ -68,7 +68,6 @@ public class TestOutputParserTest {
                 "Running main() from gtest_main.cc\n" +
                         "Neutralino.\n" +
                         "  Exists\n";
-
         final Collection<String> neutralinoActual =
                 parser.parseTestList(Arrays.asList(neutralinoTestListString.split("\n")));
         final Collection<String> neutralinoExpected = Arrays.asList("Neutralino.Exists");

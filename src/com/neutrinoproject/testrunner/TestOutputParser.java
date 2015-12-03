@@ -25,14 +25,13 @@ public class TestOutputParser {
             final Matcher matcher = testRunOutputPattern.matcher(line);
             if (matcher.find()) {
                 final String outputType = matcher.group(1);
-                final String testCaseName = matcher.group(2);
-                final String testName = matcher.group(3);
+                final String testName = matcher.group(2) + "." + matcher.group(3);
 
                 switch (outputType) {
                     case " RUN      ":
                         if (testRunState != TestRunState.RUNNING) {
                             testRunState = TestRunState.RUNNING;
-                            testEventHandler.onTestState(TestRunState.RUNNING, testCaseName, testName);
+                            testEventHandler.onTestState(TestRunState.RUNNING, testName);
                             testEventHandler.onOutLine(line);
                         }
                         return;
@@ -40,14 +39,14 @@ public class TestOutputParser {
                         if (testRunState == TestRunState.RUNNING) {
                             testRunState = TestRunState.OK;
                             testEventHandler.onOutLine(line);
-                            testEventHandler.onTestState(TestRunState.OK, testCaseName, testName);
+                            testEventHandler.onTestState(TestRunState.OK, testName);
                         }
                         return;
                     case "  FAILED  ":
                         if (testRunState == TestRunState.RUNNING) {
                             testRunState = TestRunState.FAILED;
                             testEventHandler.onOutLine(line);
-                            testEventHandler.onTestState(TestRunState.FAILED, testCaseName, testName);
+                            testEventHandler.onTestState(TestRunState.FAILED, testName);
                         }
                         return;
                 }
@@ -80,5 +79,9 @@ public class TestOutputParser {
         }
 
         return result;
+    }
+
+    private String buildFullTestName(final String testCaseName, final String testName) {
+        return testCaseName + "." + testName;
     }
 }

@@ -133,9 +133,9 @@ public class MainForm implements Observer {
         }
     }
 
-    private void onTestRunFinished() {
+    private void onTestRunFinished(final int exitCode) {
         setLoadingProgress(false);
-        statusLabel.setText("Done");
+        statusLabel.setText(exitCode == 0 ? "Ok" : "Fail");
     }
 
     @Override
@@ -152,7 +152,7 @@ public class MainForm implements Observer {
                 SwingUtilities.invokeLater(() -> onTestStateChanged((String) event.data));
                 break;
             case TEST_RUN_FINISHED:
-                SwingUtilities.invokeLater(this::onTestRunFinished);
+                SwingUtilities.invokeLater(() -> onTestRunFinished((Integer) event.data));
                 break;
             case ERROR:
                 break;
