@@ -67,6 +67,8 @@ public class MainForm implements Observer {
             testBinaryPathField.setText(path);
             setLoadingProgress(true);
             statusLabel.setText("Loading binary...");
+            rawOutputArea.setText(null);
+            testOutputTable.setModel(new DefaultTableModel());;
 
             model.startReadingBinary(path);
         }
@@ -76,6 +78,9 @@ public class MainForm implements Observer {
         setLoadingProgress(true);
         statusLabel.setText("Running tests...");
         rawOutputArea.setText(null);
+        for (int i = 0; i < testOutputTable.getModel().getRowCount(); i++) {
+            testOutputTable.getModel().setValueAt("Queued", i, 0);
+        }
 
         model.startAllTests();
     }
@@ -95,18 +100,18 @@ public class MainForm implements Observer {
 
     private void onTestCasesLoaded() {
         final Collection<TestOutputParser.TestCase> testCases = model.getTestCases();
-        final String[] columnNames = {"R", "State", "Test Name"};
+        final String[] columnNames = {"State", "Test Name"};
         final DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0);
         for (final TestOutputParser.TestCase testCase : testCases) {
-            tableModel.addRow(new Object[]{">", "", testCase.name});
+            tableModel.addRow(new Object[]{"", testCase.name});
             for (final String testName : testCase.tests) {
-                tableModel.addRow(new Object[]{">", "", "  " + testName});
+                tableModel.addRow(new Object[]{"", "  " + testName});
             }
         }
 
         testOutputTable.setModel(tableModel);
-        testOutputTable.getColumnModel().getColumn(2).setPreferredWidth(400);
-        testOutputTable.getColumnModel().getColumn(2).setWidth(400);
+        testOutputTable.getColumnModel().getColumn(1).setPreferredWidth(400);
+        testOutputTable.getColumnModel().getColumn(1).setWidth(400);
 
         setLoadingProgress(false);
         statusLabel.setText("Binary loaded");
@@ -120,7 +125,11 @@ public class MainForm implements Observer {
 
     private void onTestRunFinished() {
         setLoadingProgress(false);
-        statusLabel.setText("Ready");
+        statusLabel.setText("Done");
+    }
+
+    private void onTestStateChanged() {
+        // TODO: Implement.
     }
 
     @Override
@@ -132,6 +141,9 @@ public class MainForm implements Observer {
                 break;
             case OUT_LINE:
                 SwingUtilities.invokeLater(() -> onOutLine((String) event.data));
+                break;
+            case TEST_STATE_CHANGED:
+                SwingUtilities.invokeLater(this::onTestStateChanged);
                 break;
             case TEST_RUN_FINISHED:
                 SwingUtilities.invokeLater(this::onTestRunFinished);

@@ -30,6 +30,7 @@ public class ProcessRunnerModel extends Observable {
             TEST_CASES_LOADED,
 
             OUT_LINE,
+            TEST_STATE_CHANGED,
             TEST_RUN_FINISHED,
 
             ERROR,
@@ -108,7 +109,6 @@ public class ProcessRunnerModel extends Observable {
         final TestOutputParser testOutputParser = new TestOutputParser(new TestEventHandler() {
             @Override
             public void onOutLine(final String line) {
-                System.out.println(line);
                 setChanged();
                 notifyObservers(new Event(Event.Type.OUT_LINE, line));
             }
@@ -120,7 +120,8 @@ public class ProcessRunnerModel extends Observable {
 
             @Override
             public void onTestState(final TestRunState testState, final String testCaseName, final String testName) {
-                System.out.println(" **** " + testCaseName);
+                setChanged();
+                notifyObservers(new Event(Event.Type.TEST_STATE_CHANGED, testState));
             }
         });
 
