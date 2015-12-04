@@ -12,13 +12,13 @@ import java.util.concurrent.ExecutionException;
  */
 public class RunBinariesTest {
 
-    @Test
+//    @Test
     public void testRunNeutrinoBinary() throws IOException, ExecutionException, InterruptedException {
         final ProcessRunner processRunner = new ProcessRunner();
         processRunner.start(new String[]{getPathToResource("neutrino"), "--gtest_list_tests"}, System.out::println);
     }
 
-    @Test
+//    @Test
     public void testRunNeutralinoBinary() throws IOException, ExecutionException, InterruptedException {
         final ProcessRunner processRunner = new ProcessRunner();
         processRunner.start(new String[]{getPathToResource("neutralino")}, System.out::println);

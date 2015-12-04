@@ -3,9 +3,11 @@ package com.neutrinoproject.testrunner.process;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.mockito.Mockito.*;
 
 /**
@@ -23,17 +25,25 @@ public class ProcessRunnerTest {
 
         final int exitCode = processRunner.start(new String[]{"echo", message}, consumer);
         verify(consumer, timeout(timeoutMillis)).accept(message);
-        // TODO: Check the exit code.
+        assertEquals(0, exitCode);
     }
 
     @Test
     public void testCancelProcess() throws IOException, InterruptedException, ExecutionException {
         final ProcessRunner processRunner = new ProcessRunner();
-        final Consumer<String> consumer = mock(Consumer.class);
+        final CompletableFuture<Void> processStarted = new CompletableFuture<>();
+        final Consumer<String> notifierConsumer = s -> processStarted.complete(null);
 
-//        processRunner.start(new String[]{"sleep", "5"}, handler);
-//        processRunner.cancel();
-        // TODO: What does this test check?
+        Callable<Integer> runnerCallable = () -> processRunner.start(new String[]{"yes"}, notifierConsumer);
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        final Future<Integer> exitCode = executorService.submit(runnerCallable);
+        executorService.shutdown();
+
+        // Wait until the consumer gets some call, that means that the process has been started.
+        processStarted.join();
+        processRunner.cancel();
+
+        assertEquals(-1, exitCode.get().intValue());
     }
 
     @Test
@@ -42,6 +52,6 @@ public class ProcessRunnerTest {
         final Consumer<String> consumer = mock(Consumer.class);
 
         final int exitCode = processRunner.start(new String[]{"sleep", "-1"}, consumer);
-        // TODO: Check the exit code.
+        assertNotEquals(0, exitCode);
     }
 }
