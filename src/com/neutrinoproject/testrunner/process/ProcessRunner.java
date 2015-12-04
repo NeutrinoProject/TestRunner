@@ -9,6 +9,7 @@ import java.util.function.Consumer;
  * Created by btv on 01.12.15.
  */
 public class ProcessRunner {
+    // FIXME: Make this reference atomic.
     private Process process;
 
     public int start(final String[] command, final Consumer<String> outLineConsumer) throws IOException {

@@ -11,7 +11,6 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Stream;
 
 /**
  * Created by btv on 02.12.15.
@@ -81,7 +80,7 @@ public class ProcessRunnerModel extends Observable {
 
     public ProcessRunnerModel() {
         this.executorService = Executors.newFixedThreadPool(1);
-        testCases = new AtomicReference<>();
+        this.testCases = new AtomicReference<>();
     }
 
     public Collection<String> getTestCases() {

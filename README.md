@@ -11,11 +11,15 @@ _GUI for Google Test Famework_
  - [x] implement an option to stop the process
  - [ ] implement an option to rerun failed tests
 
+### Debt
  - [ ] check the program on Windows
+ - [ ] add proper logging
+ - [ ] replace '\n' by platform independent code
 
-## Optional
+### Optional
  - [ ] implement an option to run selected tests
  - [ ] show test cases in gui as a tree
+ - [ ] seperate std out and std err streams, show them defferently
 
 ## Known Issues
 
