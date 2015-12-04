@@ -102,10 +102,10 @@ public class MainForm implements Observer {
     }
 
     private void onTestCasesLoaded() {
-        final Collection<String> testCases = model.getTestCases();
         final String[] columnNames = {"State", "Test Name"};
         final DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0);
-        testCases.stream().forEach(testName -> tableModel.addRow(new Object[]{"", testName}));
+        final Stream<String> testNameStream = model.getTestStateMap().keySet().stream();
+        testNameStream.forEach(testName -> tableModel.addRow(new Object[]{"", testName}));
 
         testOutputTable.setModel(tableModel);
         testOutputTable.getColumnModel().getColumn(1).setPreferredWidth(400);

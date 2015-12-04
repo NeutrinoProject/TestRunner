@@ -17,21 +17,16 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class ProcessRunnerModel extends Observable {
     private final ExecutorService executorService;
-    private final AtomicReference<Collection<String>> testCases;
-    // TODO: Use more efficient data structure.
-    private final List<TestState> testStates = Collections.synchronizedList(new ArrayList<>());
+    private final AtomicReference<Map<String, TestState>> testStateMap = new AtomicReference<>(new LinkedHashMap<>());
 
     private String testBinaryPath;
     private ProcessRunner processRunner;
 
     public static class TestState {
-        private final String fullName;
-        private final List<String> outLines = Collections.synchronizedList(new ArrayList<>());
-        private TestRunState state;
 
-        public TestState(final String fullName) {
-            this.fullName = fullName;
-        }
+        private final List<String> outLines = Collections.synchronizedList(new ArrayList<>());
+        // TODO: Make access thread-safe.
+        private TestRunState state;
 
         public TestRunState getState() {
             return state;
@@ -49,9 +44,6 @@ public class ProcessRunnerModel extends Observable {
             outLines.add(line);
         }
 
-        public String getFullName() {
-            return fullName;
-        }
     }
 
     public static class Event {
@@ -80,17 +72,14 @@ public class ProcessRunnerModel extends Observable {
 
     public ProcessRunnerModel() {
         this.executorService = Executors.newFixedThreadPool(1);
-        this.testCases = new AtomicReference<>();
     }
 
-    public Collection<String> getTestCases() {
-        return testCases.get();
+    public Map<String, TestState> getTestStateMap() {
+        return testStateMap.get();
     }
 
     public Optional<TestState> getTestState(final String fullName) {
-        return testStates.stream()
-                .filter(testState -> testState.getFullName().equals(fullName))
-                .findFirst();
+        return Optional.ofNullable(testStateMap.get().get(fullName));
     }
 
     public void startReadingBinary(final String testBinaryPath) {
@@ -115,11 +104,10 @@ public class ProcessRunnerModel extends Observable {
         try {
             final int exitCode = processRunner.start(new String[]{testBinaryPath, "--gtest_list_tests"}, lines::add);
             if (exitCode == 0) {
-                testCases.set(testOutputParser.parseTestList(lines));
-                System.out.println(testCases.get());
-
-                testStates.clear();
-                testCases.get().stream().map(TestState::new).forEach(testStates::add);
+                final Collection<String> testNames = testOutputParser.parseTestList(lines);
+                final Map<String, TestState> localTestStateMap = new LinkedHashMap<>(testNames.size());
+                testNames.forEach(testName -> localTestStateMap.put(testName, new TestState()));
+                testStateMap.set(localTestStateMap);
 
                 setChanged();
                 notifyObservers(new Event(Event.Type.TEST_CASES_LOADED));
@@ -148,10 +136,10 @@ public class ProcessRunnerModel extends Observable {
 
             @Override
             public void onTestState(final TestRunState state, final String testName) {
-                testStates.stream()
-                        .filter(testState -> testState.getFullName().equals(testName))
-                        .limit(1)
-                        .forEach(testState -> testState.setState(state));
+                final TestState testState = testStateMap.get().get(testName);
+                if (testState != null) {
+                    testState.setState(state);
+                }
                 setChanged();
                 notifyObservers(new Event(Event.Type.TEST_STATE_CHANGED, testName));
             }
