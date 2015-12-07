@@ -4,6 +4,7 @@ import com.neutrinoproject.testrunner.TestEventHandler;
 import com.neutrinoproject.testrunner.TestOutputParser;
 import com.neutrinoproject.testrunner.TestRunState;
 import com.neutrinoproject.testrunner.process.ProcessRunner;
+import org.jetbrains.annotations.NotNull;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.IOException;
@@ -17,7 +18,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * Created by btv on 02.12.15.
  */
 public class GTestRunnerModel extends Observable implements TestRunnerModel {
-    private final ExecutorService executorService;
+    private final ExecutorService executorService = Executors.newFixedThreadPool(1);
     private final AtomicReference<Map<String, TestState>> testStateMap = new AtomicReference<>(new LinkedHashMap<>());
     private final AtomicReference<List<String>> overallOutLines =
             new AtomicReference<>(Collections.synchronizedList(new ArrayList<>()));
@@ -49,10 +50,6 @@ public class GTestRunnerModel extends Observable implements TestRunnerModel {
         }
     }
 
-    public GTestRunnerModel() {
-        this.executorService = Executors.newFixedThreadPool(1);
-    }
-
     @Override
     public void startReadingBinary(final String testBinaryPath) {
         this.testBinaryPath = testBinaryPath;
@@ -75,21 +72,25 @@ public class GTestRunnerModel extends Observable implements TestRunnerModel {
         processRunner.cancel();
     }
 
+    @NotNull
     @Override
     public Collection<String> getTestNames() {
         return testStateMap.get().keySet();
     }
 
+    @NotNull
     @Override
     public Collection<String> getOverallTestOutput() {
         return overallOutLines.get();
     }
 
+    @NotNull
     @Override
     public Optional<TestRunState> getTestState(final String testName) {
         return Optional.ofNullable(testStateMap.get().get(testName)).map(TestState::getState);
     }
 
+    @NotNull
     @Override
     public Collection<String> getTestOutput(final String testName) {
         final TestState testState = testStateMap.get().get(testName);
