@@ -17,37 +17,18 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Created by btv on 02.12.15.
  */
-public class GTestRunnerModel extends Observable implements TestRunnerModel {
+public class GTestRunnerModel implements TestRunnerModel {
     private final ExecutorService executorService = Executors.newFixedThreadPool(1);
     private final AtomicReference<Map<String, TestState>> testStateMap = new AtomicReference<>(new LinkedHashMap<>());
     private final AtomicReference<List<String>> overallOutLines =
             new AtomicReference<>(Collections.synchronizedList(new ArrayList<>()));
+    private final TestRunnerHandler testRunnerHandler;
 
     private String testBinaryPath;
     private ProcessRunner processRunner;
 
-    public static class Event {
-        public enum Type {
-            TEST_CASES_LOADED,
-
-            OUT_LINE,
-            TEST_STATE_CHANGED,
-            TEST_RUN_FINISHED,
-
-            ERROR,
-        }
-
-        public final Type type;
-        public final Object data;
-
-        public Event(final Type type) {
-            this(type, null);
-        }
-
-        public Event(final Type type, final Object data) {
-            this.type = type;
-            this.data = data;
-        }
+    public GTestRunnerModel(final TestRunnerHandler testRunnerHandler) {
+        this.testRunnerHandler = testRunnerHandler;
     }
 
     @Override
@@ -101,6 +82,7 @@ public class GTestRunnerModel extends Observable implements TestRunnerModel {
         final Collection<String> lines = new ArrayList<>();
         final TestOutputParser testOutputParser = new TestOutputParser(null);
 
+        boolean hasSucceed = false;
         processRunner = new ProcessRunner();
         try {
             final int exitCode = processRunner.start(new String[]{testBinaryPath, "--gtest_list_tests"}, lines::add);
@@ -112,15 +94,15 @@ public class GTestRunnerModel extends Observable implements TestRunnerModel {
 
                 overallOutLines.set(Collections.synchronizedList(new ArrayList<>()));
 
-                setChanged();
-                notifyObservers(new Event(Event.Type.TEST_CASES_LOADED));
+                hasSucceed = true;
             } else {
-                // TODO: Handle the exit code.
+                // TODO: Log this problem.
             }
-        } catch (IOException e) {
+        } catch (IOException | ParseException e) {
+            // TODO: Log this problem.
             e.printStackTrace();
-        } catch (ParseException e) {
-            e.printStackTrace();
+        } finally {
+            testRunnerHandler.onTestsLoadingFinished(hasSucceed);
         }
     }
 
@@ -135,8 +117,8 @@ public class GTestRunnerModel extends Observable implements TestRunnerModel {
                 if (currentTestState != null) {
                     currentTestState.appendOutLine(line);
                 }
-                setChanged();
-                notifyObservers(new Event(Event.Type.OUT_LINE, line));
+                // TODO: Implement passing test name and indices.
+                testRunnerHandler.onOutputLine(null, 0, 0, line);
             }
 
             @Override
@@ -152,21 +134,25 @@ public class GTestRunnerModel extends Observable implements TestRunnerModel {
                     if (state == TestRunState.RUNNING) {
                         currentTestState = testState;
                     }
-                    setChanged();
-                    notifyObservers(new Event(Event.Type.TEST_STATE_CHANGED, testName));
+                    testRunnerHandler.onTestStateChange(testName, state);
                 }
             }
         });
 
+        boolean hasSucceed = false;
         processRunner = new ProcessRunner();
-        int exitCode = -1;
         try {
-            exitCode = processRunner.start(new String[]{testBinaryPath}, testOutputParser::parseString);
-            setChanged();
+            final int exitCode = processRunner.start(new String[]{testBinaryPath}, testOutputParser::parseString);
+            if (exitCode == 0) {
+                hasSucceed = true;
+            } else {
+                // TODO: Log the problem somehow.
+            }
         } catch (IOException e) {
             // TODO: Log the problem somehow.
             e.printStackTrace();
+        } finally {
+            testRunnerHandler.onTestRunFinished(hasSucceed);
         }
-        notifyObservers(new Event(Event.Type.TEST_RUN_FINISHED, exitCode));
     }
 }

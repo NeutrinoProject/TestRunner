@@ -1,6 +1,7 @@
 package com.neutrinoproject.testrunner.ui;
 
 import com.neutrinoproject.testrunner.TestRunState;
+import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -14,7 +15,7 @@ import java.util.stream.Stream;
 /**
  * Created by btv on 02.12.15.
  */
-public class MainForm implements Observer {
+public class MainForm implements TestRunnerHandler {
     private JFrame mainFrame;
     private JPanel mainPanel;
 
@@ -33,12 +34,10 @@ public class MainForm implements Observer {
 
     private JProgressBar progressBar;
 
-    private TestRunnerModel testRunnerModel = new GTestRunnerModel();
+    private TestRunnerModel testRunnerModel;
 
     public void initForm() {
-        final GTestRunnerModel model = new GTestRunnerModel();
-        model.addObserver(this);
-        testRunnerModel = model;
+        testRunnerModel = new GTestRunnerModel(this);
 
         mainFrame = new JFrame();
 
@@ -101,61 +100,54 @@ public class MainForm implements Observer {
 //        progressBar.setValue(loading ? progressBar.getMinimum() : progressBar.getMaximum());
     }
 
-    private void onTestCasesLoaded() {
-        final String[] columnNames = {"State", "Test Name"};
-        final DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0);
-        final Stream<String> testNameStream = testRunnerModel.getTestNames().stream();
-        testNameStream.forEach(testName -> tableModel.addRow(new Object[]{"", testName}));
+    @Override
+    public void onTestsLoadingFinished(final boolean success) {
+        SwingUtilities.invokeLater(() -> {
+            final String[] columnNames = {"State", "Test Name"};
+            final DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0);
 
-        testOutputTable.setModel(tableModel);
-        testOutputTable.getColumnModel().getColumn(1).setPreferredWidth(400);
-        testOutputTable.getColumnModel().getColumn(1).setWidth(400);
+            testOutputTable.setModel(tableModel);
+            testOutputTable.getColumnModel().getColumn(1).setPreferredWidth(400);
+            testOutputTable.getColumnModel().getColumn(1).setWidth(400);
 
-        setLoadingProgress(false);
-        statusLabel.setText("Binary loaded");
-    }
-
-    private void onOutLine(final String line) {
-        rawOutputArea.append(line);
-        rawOutputArea.append("\n");
-        rawOutputArea.setCaretPosition(rawOutputArea.getDocument().getLength());
-    }
-
-    private void onTestStateChanged(final String fullName) {
-        for (int i = 0; i < testOutputTable.getModel().getRowCount(); i++) {
-            if (testOutputTable.getModel().getValueAt(i, 1).equals(fullName)) {
-                final Optional<TestRunState> testState = testRunnerModel.getTestState(fullName);
-                if (testState.isPresent()) {
-                    testOutputTable.getModel().setValueAt(testState.get(), i, 0);
-                }
-                return;
+            if (success) {
+                final Stream<String> testNameStream = testRunnerModel.getTestNames().stream();
+                testNameStream.forEach(testName -> tableModel.addRow(new Object[]{"", testName}));
+                statusLabel.setText("Binary loaded");
+            } else {
+                statusLabel.setText("Error");
             }
-        }
-    }
-
-    private void onTestRunFinished(final int exitCode) {
-        setLoadingProgress(false);
-        statusLabel.setText(exitCode == 0 ? "Ok" : "Fail");
+            setLoadingProgress(false);
+        });
     }
 
     @Override
-    public void update(final Observable o, final Object arg) {
-        final GTestRunnerModel.Event event = (GTestRunnerModel.Event) arg;
-        switch (event.type) {
-            case TEST_CASES_LOADED:
-                SwingUtilities.invokeLater(this::onTestCasesLoaded);
-                break;
-            case OUT_LINE:
-                SwingUtilities.invokeLater(() -> onOutLine((String) event.data));
-                break;
-            case TEST_STATE_CHANGED:
-                SwingUtilities.invokeLater(() -> onTestStateChanged((String) event.data));
-                break;
-            case TEST_RUN_FINISHED:
-                SwingUtilities.invokeLater(() -> onTestRunFinished((Integer) event.data));
-                break;
-            case ERROR:
-                break;
-        }
+    public void onOutputLine(@Nullable final String testName, final int overallLineIndex, final int testLineIndex, final String outputLine) {
+        SwingUtilities.invokeLater(() -> {
+            rawOutputArea.append(outputLine);
+            rawOutputArea.append("\n");
+            rawOutputArea.setCaretPosition(rawOutputArea.getDocument().getLength());
+        });
+    }
+
+    @Override
+    public void onTestStateChange(final String testName, final TestRunState newState) {
+        SwingUtilities.invokeLater(() -> {
+            for (int i = 0; i < testOutputTable.getModel().getRowCount(); i++) {
+                if (testOutputTable.getModel().getValueAt(i, 1).equals(testName)) {
+                    testOutputTable.getModel().setValueAt(newState, i, 0);
+                    return;
+                }
+            }
+        });
+    }
+
+    @Override
+    public void onTestRunFinished(final boolean success) {
+        SwingUtilities.invokeLater(() -> {
+            // TODO: Clean up test state. Set Running to Fail, Queued to Skipped.
+            setLoadingProgress(false);
+            statusLabel.setText(success ? "Ok" : "Fail");
+        });
     }
 }
