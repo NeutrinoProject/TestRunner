@@ -4,6 +4,7 @@ import com.neutrinoproject.testrunner.TestEventHandler;
 import com.neutrinoproject.testrunner.TestOutputParser;
 import com.neutrinoproject.testrunner.TestRunState;
 import com.neutrinoproject.testrunner.process.ProcessRunner;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -15,7 +16,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Created by btv on 02.12.15.
  */
-public class ProcessRunnerModel extends Observable {
+public class GTestRunnerModel extends Observable implements TestRunnerModel {
     private final ExecutorService executorService;
     private final AtomicReference<Map<String, TestState>> testStateMap = new AtomicReference<>(new LinkedHashMap<>());
     private final AtomicReference<List<String>> overallOutLines =
@@ -70,30 +71,51 @@ public class ProcessRunnerModel extends Observable {
         }
     }
 
-    public ProcessRunnerModel() {
+    public GTestRunnerModel() {
         this.executorService = Executors.newFixedThreadPool(1);
     }
 
-    public Map<String, TestState> getTestStateMap() {
-        return testStateMap.get();
-    }
-
-    public Optional<TestState> getTestState(final String fullName) {
-        return Optional.ofNullable(testStateMap.get().get(fullName));
-    }
-
+    @Override
     public void startReadingBinary(final String testBinaryPath) {
         this.testBinaryPath = testBinaryPath;
         executorService.submit(this::readBinary);
     }
 
+    @Override
     public void startAllTests() {
         executorService.submit(this::runAllTests);
     }
 
+    @Override
+    public void startTests(final Collection<String> testNames) {
+        throw new NotImplementedException();
+    }
+
+    @Override
     public void stopAllProcesses() {
         // FIXME: processRunner might be null if readBinary has not started yet.
         processRunner.cancel();
+    }
+
+    @Override
+    public Collection<String> getTestNames() {
+        return testStateMap.get().keySet();
+    }
+
+    @Override
+    public Collection<String> getOverallTestOutput() {
+        return overallOutLines.get();
+    }
+
+    @Override
+    public Optional<TestRunState> getTestState(final String testName) {
+        return Optional.ofNullable(testStateMap.get().get(testName)).map(TestState::getState);
+    }
+
+    @Override
+    public Collection<String> getTestOutput(final String testName) {
+        final TestState testState = testStateMap.get().get(testName);
+        return Optional.ofNullable(testState).map(TestState::getOutLines).orElse(null);
     }
 
     private void readBinary() {

@@ -1,13 +1,11 @@
 package com.neutrinoproject.testrunner.ui;
 
-import com.neutrinoproject.testrunner.TestOutputParser;
 import com.neutrinoproject.testrunner.TestRunState;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.util.Collection;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
@@ -35,10 +33,12 @@ public class MainForm implements Observer {
 
     private JProgressBar progressBar;
 
-    private final ProcessRunnerModel model = new ProcessRunnerModel();
+    private TestRunnerModel testRunnerModel = new GTestRunnerModel();
 
     public void initForm() {
+        final GTestRunnerModel model = new GTestRunnerModel();
         model.addObserver(this);
+        testRunnerModel = model;
 
         mainFrame = new JFrame();
 
@@ -73,7 +73,7 @@ public class MainForm implements Observer {
             rawOutputArea.setText(null);
             testOutputTable.setModel(new DefaultTableModel());;
 
-            model.startReadingBinary(path);
+            testRunnerModel.startReadingBinary(path);
         }
     }
 
@@ -85,11 +85,11 @@ public class MainForm implements Observer {
             testOutputTable.getModel().setValueAt("Queued", i, 0);
         }
 
-        model.startAllTests();
+        testRunnerModel.startAllTests();
     }
 
     private void onStop(final ActionEvent event) {
-        model.stopAllProcesses();
+        testRunnerModel.stopAllProcesses();
         setLoadingProgress(false);
         statusLabel.setText("Stopped");
     }
@@ -104,7 +104,7 @@ public class MainForm implements Observer {
     private void onTestCasesLoaded() {
         final String[] columnNames = {"State", "Test Name"};
         final DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0);
-        final Stream<String> testNameStream = model.getTestStateMap().keySet().stream();
+        final Stream<String> testNameStream = testRunnerModel.getTestNames().stream();
         testNameStream.forEach(testName -> tableModel.addRow(new Object[]{"", testName}));
 
         testOutputTable.setModel(tableModel);
@@ -124,9 +124,9 @@ public class MainForm implements Observer {
     private void onTestStateChanged(final String fullName) {
         for (int i = 0; i < testOutputTable.getModel().getRowCount(); i++) {
             if (testOutputTable.getModel().getValueAt(i, 1).equals(fullName)) {
-                final Optional<ProcessRunnerModel.TestState> testState = model.getTestState(fullName);
+                final Optional<TestRunState> testState = testRunnerModel.getTestState(fullName);
                 if (testState.isPresent()) {
-                    testOutputTable.getModel().setValueAt(testState.get().getState(), i, 0);
+                    testOutputTable.getModel().setValueAt(testState.get(), i, 0);
                 }
                 return;
             }
@@ -140,7 +140,7 @@ public class MainForm implements Observer {
 
     @Override
     public void update(final Observable o, final Object arg) {
-        final ProcessRunnerModel.Event event = (ProcessRunnerModel.Event) arg;
+        final GTestRunnerModel.Event event = (GTestRunnerModel.Event) arg;
         switch (event.type) {
             case TEST_CASES_LOADED:
                 SwingUtilities.invokeLater(this::onTestCasesLoaded);

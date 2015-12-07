@@ -14,9 +14,6 @@ import static org.mockito.Mockito.*;
  * Created by btv on 01.12.15.
  */
 public class ProcessRunnerTest {
-
-    private final int timeoutMillis = 100;
-
     @Test
     public void testRunEcho() throws IOException, InterruptedException, ExecutionException {
         final ProcessRunner processRunner = new ProcessRunner();
@@ -24,7 +21,7 @@ public class ProcessRunnerTest {
         final Consumer<String> consumer = mock(Consumer.class);
 
         final int exitCode = processRunner.start(new String[]{"echo", message}, consumer);
-        verify(consumer, timeout(timeoutMillis)).accept(message);
+        verify(consumer).accept(message);
         assertEquals(0, exitCode);
     }
 
