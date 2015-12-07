@@ -18,14 +18,14 @@ import java.util.concurrent.atomic.AtomicReference;
 public class ProcessRunnerModel extends Observable {
     private final ExecutorService executorService;
     private final AtomicReference<Map<String, TestState>> testStateMap = new AtomicReference<>(new LinkedHashMap<>());
+    private final AtomicReference<List<String>> overallOutLines =
+            new AtomicReference<>(Collections.synchronizedList(new ArrayList<>()));
 
     private String testBinaryPath;
     private ProcessRunner processRunner;
 
     public static class TestState {
-
         private final List<String> outLines = Collections.synchronizedList(new ArrayList<>());
-        // TODO: Make access thread-safe.
         private TestRunState state;
 
         public TestRunState getState() {
@@ -109,6 +109,8 @@ public class ProcessRunnerModel extends Observable {
                 testNames.forEach(testName -> localTestStateMap.put(testName, new TestState()));
                 testStateMap.set(localTestStateMap);
 
+                overallOutLines.set(Collections.synchronizedList(new ArrayList<>()));
+
                 setChanged();
                 notifyObservers(new Event(Event.Type.TEST_CASES_LOADED));
             } else {
@@ -123,8 +125,15 @@ public class ProcessRunnerModel extends Observable {
 
     private void runAllTests() {
         final TestOutputParser testOutputParser = new TestOutputParser(new TestEventHandler() {
+            private TestState currentTestState;
+            private final List<String> overallOutLinesLocal = overallOutLines.get();
+
             @Override
             public void onOutLine(final String line) {
+                overallOutLinesLocal.add(line);
+                if (currentTestState != null) {
+                    currentTestState.appendOutLine(line);
+                }
                 setChanged();
                 notifyObservers(new Event(Event.Type.OUT_LINE, line));
             }
@@ -139,9 +148,12 @@ public class ProcessRunnerModel extends Observable {
                 final TestState testState = testStateMap.get().get(testName);
                 if (testState != null) {
                     testState.setState(state);
+                    if (state == TestRunState.RUNNING) {
+                        currentTestState = testState;
+                    }
+                    setChanged();
+                    notifyObservers(new Event(Event.Type.TEST_STATE_CHANGED, testName));
                 }
-                setChanged();
-                notifyObservers(new Event(Event.Type.TEST_STATE_CHANGED, testName));
             }
         });
 
