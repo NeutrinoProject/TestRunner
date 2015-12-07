@@ -25,28 +25,6 @@ public class GTestRunnerModel extends Observable implements TestRunnerModel {
     private String testBinaryPath;
     private ProcessRunner processRunner;
 
-    public static class TestState {
-        private final List<String> outLines = Collections.synchronizedList(new ArrayList<>());
-        private TestRunState state;
-
-        public TestRunState getState() {
-            return state;
-        }
-
-        public void setState(final TestRunState state) {
-            this.state = state;
-        }
-
-        public List<String> getOutLines() {
-            return outLines;
-        }
-
-        public void appendOutLine(final String line) {
-            outLines.add(line);
-        }
-
-    }
-
     public static class Event {
         public enum Type {
             TEST_CASES_LOADED,
