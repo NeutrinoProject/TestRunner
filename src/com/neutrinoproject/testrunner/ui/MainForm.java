@@ -5,8 +5,11 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 /**
@@ -69,7 +72,7 @@ public class MainForm implements TestRunnerHandler {
             setLoadingProgress(true);
             statusLabel.setText("Loading binary...");
             rawOutputArea.setText(null);
-            testOutputTable.setModel(new DefaultTableModel());;
+            testOutputTable.setModel(new DefaultTableModel());
 
             testRunnerModel.startReadingBinary(path);
         }
@@ -79,9 +82,7 @@ public class MainForm implements TestRunnerHandler {
         setLoadingProgress(true);
         statusLabel.setText("Running tests...");
         rawOutputArea.setText(null);
-        for (int i = 0; i < testOutputTable.getModel().getRowCount(); i++) {
-            testOutputTable.getModel().setValueAt("Queued", i, 0);
-        }
+        getStreamOfTestResultTableRows().forEach(tableRow -> tableRow.setTestRunState("Queued"));
 
         testRunnerModel.startAllTests();
     }
@@ -141,24 +142,56 @@ public class MainForm implements TestRunnerHandler {
 
     @Override
     public void onTestStateChange(final String testName, final TestRunState newState) {
-        SwingUtilities.invokeLater(() -> {
-            for (int i = 0; i < testOutputTable.getModel().getRowCount(); i++) {
-                if (testOutputTable.getModel().getValueAt(i, 1).equals(testName)) {
-                    testOutputTable.getModel().setValueAt(newState, i, 0);
-                    return;
-                }
-            }
-        });
+        SwingUtilities.invokeLater(() ->
+                getStreamOfTestResultTableRows()
+                        .filter(tableRow -> tableRow.testName.equals(testName))
+                        .forEach(tableRow1 -> tableRow1.setTestRunState(newState.toString())));
     }
 
     @Override
     public void onTestRunFinished(final boolean success) {
         SwingUtilities.invokeLater(() -> {
-            // TODO: Clean up test state. Set Running to Fail, Queued to Skipped.
+            getStreamOfTestResultTableRows().forEach(tableRow -> {
+                if (tableRow.testRunState.equals(TestRunState.RUNNING.toString()) || tableRow.testRunState.equals("Queued")) {
+                    tableRow.setTestRunState("Stopped");
+                }
+            });
+
             setLoadingProgress(false);
             statusLabel.setText(success ? "Ok" : "Fail");
             runAllTestsButton.setEnabled(true);
-            // TODO: If there were some failed tests, enable runFailedButton.
+
+            final boolean hasFailedTests = getStreamOfTestResultTableRows()
+                    .anyMatch(tableRow -> tableRow.testRunState.equals(TestRunState.FAILED.toString()));
+            runFailedButton.setEnabled(hasFailedTests);
         });
+    }
+
+    private class TableRow {
+        public String testRunState;
+        public String testName;
+        public int index;
+
+        public TableRow(final String testRunState, final String testName, final int index) {
+            this.testRunState = testRunState;
+            this.testName = testName;
+            this.index = index;
+        }
+
+        public void setTestRunState(final String state) {
+            testOutputTable.getModel().setValueAt(state, index, 0);
+        }
+    }
+
+    private Stream<TableRow> getStreamOfTestResultTableRows() {
+        final AtomicInteger index = new AtomicInteger(0);
+        final TableModel tableModel = testOutputTable.getModel();
+        Supplier<TableRow> supplier = () -> {
+            final int localIndex = index.getAndIncrement();
+            return new TableRow((String) tableModel.getValueAt(localIndex, 0),
+                    (String) tableModel.getValueAt(localIndex, 1),
+                    localIndex);
+        };
+        return Stream.generate(supplier).limit(tableModel.getRowCount());
     }
 }
