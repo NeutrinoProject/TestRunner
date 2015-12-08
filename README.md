@@ -22,5 +22,5 @@ _GUI for Google Test Famework_
  - [ ] seperate std out and std err streams, show them defferently
 
 ## Known Issues
- - [ ] test output table is editable
+ - [x] test output table is editable
 

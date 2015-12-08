@@ -7,9 +7,6 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.util.Observable;
-import java.util.Observer;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
@@ -104,11 +101,17 @@ public class MainForm implements TestRunnerHandler {
     public void onTestsLoadingFinished(final boolean success) {
         SwingUtilities.invokeLater(() -> {
             final String[] columnNames = {"State", "Test Name"};
-            final DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0);
+            final DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
+                @Override
+                public boolean isCellEditable(final int row, final int column) {
+                    return false;
+                }
+            };
 
             testOutputTable.setModel(tableModel);
             testOutputTable.getColumnModel().getColumn(1).setPreferredWidth(400);
             testOutputTable.getColumnModel().getColumn(1).setWidth(400);
+            testOutputTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
             if (success) {
                 final Stream<String> testNameStream = testRunnerModel.getTestNames().stream();
