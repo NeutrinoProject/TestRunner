@@ -39,12 +39,12 @@ public class GTestRunnerModel implements TestRunnerModel {
 
     @Override
     public void startAllTests() {
-        executorService.submit(this::runAllTests);
+        startTests(Collections.emptyList());
     }
 
     @Override
     public void startTests(final Collection<String> testNames) {
-        throw new NotImplementedException();
+        executorService.submit(() -> runTests(testNames));
     }
 
     @Override
@@ -106,7 +106,7 @@ public class GTestRunnerModel implements TestRunnerModel {
         }
     }
 
-    private void runAllTests() {
+    private void runTests(final Collection<String> testNames) {
         final TestOutputParser testOutputParser = new TestOutputParser(new TestEventHandler() {
             private TestState currentTestState;
             private final List<String> overallOutLinesLocal = overallOutLines.get();
@@ -139,10 +139,12 @@ public class GTestRunnerModel implements TestRunnerModel {
             }
         });
 
+        final String testFilterFlag = testNames.isEmpty() ? "" : "--gtest_filter=" + String.join(":", testNames);
+
         boolean hasSucceed = false;
         processRunner = new ProcessRunner();
         try {
-            final int exitCode = processRunner.start(new String[]{testBinaryPath}, testOutputParser::parseString);
+            final int exitCode = processRunner.start(new String[]{testBinaryPath, testFilterFlag}, testOutputParser::parseString);
             if (exitCode == 0) {
                 hasSucceed = true;
             } else {

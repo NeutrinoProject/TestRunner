@@ -8,9 +8,12 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  * Created by btv on 02.12.15.
@@ -56,6 +59,7 @@ public class MainForm implements TestRunnerHandler {
 
         loadTestBinaryButton.addActionListener(this::onLoadTestBinary);
         runAllTestsButton.addActionListener(this::onRunAllTests);
+        runFailedButton.addActionListener(this::onRunFailedTests);
         stopButton.addActionListener(this::onStop);
     }
 
@@ -85,6 +89,20 @@ public class MainForm implements TestRunnerHandler {
         getStreamOfTestResultTableRows().forEach(tableRow -> tableRow.setTestRunState("Queued"));
 
         testRunnerModel.startAllTests();
+    }
+
+    private void onRunFailedTests(final ActionEvent event) {
+        setLoadingProgress(true);
+        statusLabel.setText("Running tests...");
+        rawOutputArea.setText(null);
+
+        final java.util.List<String> failedTestNames = getStreamOfTestResultTableRows()
+                .peek(tableRow -> tableRow.setTestRunState(""))
+                .filter(tableRow -> tableRow.testRunState.equals(TestRunState.FAILED.toString()))
+                .peek(tableRow -> tableRow.setTestRunState("Queued"))
+                .map(tableRow -> tableRow.testName).collect(toList());
+
+        testRunnerModel.startTests(failedTestNames);
     }
 
     private void onStop(final ActionEvent event) {
@@ -145,7 +163,7 @@ public class MainForm implements TestRunnerHandler {
         SwingUtilities.invokeLater(() ->
                 getStreamOfTestResultTableRows()
                         .filter(tableRow -> tableRow.testName.equals(testName))
-                        .forEach(tableRow1 -> tableRow1.setTestRunState(newState.toString())));
+                        .forEach(tableRow -> tableRow.setTestRunState(newState.toString())));
     }
 
     @Override
