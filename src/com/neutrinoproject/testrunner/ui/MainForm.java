@@ -47,7 +47,9 @@ public class MainForm implements TestRunnerHandler {
 //        mainFrame.pack();
 
         rawOutputArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, rawOutputArea.getFont().getSize()));
+        runAllTestsButton.setEnabled(false);
         runSelectedButton.setEnabled(false);
+        runFailedButton.setEnabled(false);
 
         loadTestBinaryButton.addActionListener(this::onLoadTestBinary);
         runAllTestsButton.addActionListener(this::onRunAllTests);
@@ -91,8 +93,11 @@ public class MainForm implements TestRunnerHandler {
     }
 
     private void setLoadingProgress(boolean loading) {
-        Stream.of(loadTestBinaryButton, runAllTestsButton, runFailedButton)
-                .forEach(b -> b.setEnabled(!loading));
+        if (loading) {
+            runAllTestsButton.setEnabled(false);
+            runFailedButton.setEnabled(false);
+        }
+        loadTestBinaryButton.setEnabled(!loading);
         stopButton.setEnabled(loading);
 //        progressBar.setValue(loading ? progressBar.getMinimum() : progressBar.getMaximum());
     }
@@ -116,6 +121,7 @@ public class MainForm implements TestRunnerHandler {
             if (success) {
                 final Stream<String> testNameStream = testRunnerModel.getTestNames().stream();
                 testNameStream.forEach(testName -> tableModel.addRow(new Object[]{"", testName}));
+                runAllTestsButton.setEnabled(true);
                 statusLabel.setText("Binary loaded");
             } else {
                 statusLabel.setText("Error");
@@ -151,6 +157,8 @@ public class MainForm implements TestRunnerHandler {
             // TODO: Clean up test state. Set Running to Fail, Queued to Skipped.
             setLoadingProgress(false);
             statusLabel.setText(success ? "Ok" : "Fail");
+            runAllTestsButton.setEnabled(true);
+            // TODO: If there were some failed tests, enable runFailedButton.
         });
     }
 }
