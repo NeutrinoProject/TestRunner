@@ -1,11 +1,9 @@
 package com.neutrinoproject.testrunner.ui;
 
-import com.neutrinoproject.testrunner.TestEventHandler;
 import com.neutrinoproject.testrunner.TestOutputParser;
 import com.neutrinoproject.testrunner.TestRunState;
 import com.neutrinoproject.testrunner.process.ProcessRunner;
 import org.jetbrains.annotations.NotNull;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -13,6 +11,7 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 /**
  * Created by btv on 02.12.15.
@@ -22,12 +21,12 @@ public class GTestRunnerModel implements TestRunnerModel {
     private final AtomicReference<Map<String, TestState>> testStateMap = new AtomicReference<>(new LinkedHashMap<>());
     private final AtomicReference<List<String>> overallOutLines =
             new AtomicReference<>(Collections.synchronizedList(new ArrayList<>()));
-    private final TestRunnerHandler testRunnerHandler;
+    private TestRunnerHandler testRunnerHandler;
 
     private String testBinaryPath;
     private ProcessRunner processRunner;
 
-    public GTestRunnerModel(final TestRunnerHandler testRunnerHandler) {
+    public void setTestRunnerHandler(final TestRunnerHandler testRunnerHandler) {
         this.testRunnerHandler = testRunnerHandler;
     }
 
@@ -80,7 +79,7 @@ public class GTestRunnerModel implements TestRunnerModel {
 
     private void readBinary() {
         final Collection<String> lines = new ArrayList<>();
-        final TestOutputParser testOutputParser = new TestOutputParser(null);
+        final TestOutputParser testOutputParser = new TestOutputParser();
 
         boolean hasSucceed = false;
         processRunner = new ProcessRunner();
@@ -107,12 +106,24 @@ public class GTestRunnerModel implements TestRunnerModel {
     }
 
     private void runTests(final Collection<String> testNames) {
-        final TestOutputParser testOutputParser = new TestOutputParser(new TestEventHandler() {
-            private TestState currentTestState;
+        final Consumer<String> consumer = new Consumer<String>() {
+            private final TestOutputParser parser = new TestOutputParser();
             private final List<String> overallOutLinesLocal = overallOutLines.get();
+            private TestState currentTestState;
 
             @Override
-            public void onOutLine(final String line) {
+            public void accept(final String line) {
+                final TestOutputParser.Result result = parser.parseOutputLine(line);
+                if (result != null) {
+                    final TestState testState = testStateMap.get().get(result.testName);
+                    if (testState != null) {
+                        testState.setState(result.testState);
+                        if (result.testState == TestRunState.RUNNING) {
+                            currentTestState = testState;
+                        }
+                        testRunnerHandler.onTestStateChange(result.testName, result.testState);
+                    }
+                }
                 overallOutLinesLocal.add(line);
                 if (currentTestState != null) {
                     currentTestState.appendOutLine(line);
@@ -120,31 +131,14 @@ public class GTestRunnerModel implements TestRunnerModel {
                 // TODO: Implement passing test name and indices.
                 testRunnerHandler.onOutputLine(null, 0, 0, line);
             }
-
-            @Override
-            public void onErrLine(final String line) {
-                System.out.println(line);
-            }
-
-            @Override
-            public void onTestState(final TestRunState state, final String testName) {
-                final TestState testState = testStateMap.get().get(testName);
-                if (testState != null) {
-                    testState.setState(state);
-                    if (state == TestRunState.RUNNING) {
-                        currentTestState = testState;
-                    }
-                    testRunnerHandler.onTestStateChange(testName, state);
-                }
-            }
-        });
+        };
 
         final String testFilterFlag = testNames.isEmpty() ? "" : "--gtest_filter=" + String.join(":", testNames);
 
         boolean hasSucceed = false;
         processRunner = new ProcessRunner();
         try {
-            final int exitCode = processRunner.start(new String[]{testBinaryPath, testFilterFlag}, testOutputParser::parseString);
+            final int exitCode = processRunner.start(new String[]{testBinaryPath, testFilterFlag}, consumer);
             if (exitCode == 0) {
                 hasSucceed = true;
             } else {

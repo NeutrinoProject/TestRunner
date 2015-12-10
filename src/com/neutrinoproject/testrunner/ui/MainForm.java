@@ -39,9 +39,11 @@ public class MainForm implements TestRunnerHandler {
 
     private TestRunnerModel testRunnerModel;
 
-    public void initForm() {
-        testRunnerModel = new GTestRunnerModel(this);
+    public void setTestRunnerModel(final TestRunnerModel testRunnerModel) {
+        this.testRunnerModel = testRunnerModel;
+    }
 
+    public void initForm() {
         mainFrame = new JFrame();
 
         mainFrame.setContentPane(mainPanel);

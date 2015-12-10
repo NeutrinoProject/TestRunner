@@ -1,5 +1,7 @@
 package com.neutrinoproject.testrunner;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -13,14 +15,38 @@ public class TestOutputParser {
     private final Pattern testRunOutputPattern = Pattern.compile("^\\[(.{10})\\] (\\w+\\.\\w+).*");
     private final Pattern testListTestCasePattern = Pattern.compile("^(\\w+)\\.$");
     private final Pattern testListTestNamePattern = Pattern.compile("^  (\\w+)$");
-    private final TestEventHandler testEventHandler;
     private TestRunState testRunState;
 
-    public TestOutputParser(final TestEventHandler testEventHandler) {
-        this.testEventHandler = testEventHandler;
+    public static class Result {
+        public final String testName;
+        public final TestRunState testState;
+
+        public Result(final String testName, final TestRunState testState) {
+            this.testName = testName;
+            this.testState = testState;
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            final Result result = (Result) o;
+
+            if (!testName.equals(result.testName)) return false;
+            return testState == result.testState;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = testName.hashCode();
+            result = 31 * result + testState.hashCode();
+            return result;
+        }
     }
 
-    public void parseString(final String line) {
+    @Nullable
+    public Result parseOutputLine(final String line) {
         if (line.startsWith("[ ")) {
             final Matcher matcher = testRunOutputPattern.matcher(line);
             if (matcher.find()) {
@@ -31,28 +57,25 @@ public class TestOutputParser {
                     case " RUN      ":
                         if (testRunState != TestRunState.RUNNING) {
                             testRunState = TestRunState.RUNNING;
-                            testEventHandler.onTestState(TestRunState.RUNNING, testName);
-                            testEventHandler.onOutLine(line);
+                            return new Result(testName, testRunState);
                         }
-                        return;
+                        break;
                     case "       OK ":
                         if (testRunState == TestRunState.RUNNING) {
                             testRunState = TestRunState.OK;
-                            testEventHandler.onOutLine(line);
-                            testEventHandler.onTestState(TestRunState.OK, testName);
+                            return new Result(testName, testRunState);
                         }
-                        return;
+                        break;
                     case "  FAILED  ":
                         if (testRunState == TestRunState.RUNNING) {
                             testRunState = TestRunState.FAILED;
-                            testEventHandler.onOutLine(line);
-                            testEventHandler.onTestState(TestRunState.FAILED, testName);
+                            return new Result(testName, testRunState);
                         }
-                        return;
+                        break;
                 }
             }
         }
-        testEventHandler.onOutLine(line);
+        return null;
     }
 
     public Collection<String> parseTestList(final Collection<String> lines) throws ParseException {

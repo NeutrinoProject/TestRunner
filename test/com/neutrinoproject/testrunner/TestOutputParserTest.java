@@ -8,46 +8,43 @@ import java.util.Collection;
 
 import static org.junit.Assert.*;
 
-import static org.mockito.Mockito.*;
-
 /**
  * Created by btv on 30.11.15.
  */
 public class TestOutputParserTest {
 
     @Test
-    public void testParseString() throws Exception {
-        final TestEventHandler handler = mock(TestEventHandler.class);
-        final TestOutputParser parser = new TestOutputParser(handler);
+    public void testParseOutputLine() throws Exception {
+        final TestOutputParser parser = new TestOutputParser();
 
-        final String someText = "some text";
-        parser.parseString(someText);
-        verify(handler).onOutLine(someText);
+        assertNull(parser.parseOutputLine("some text"));
+        assertNull(parser.parseOutputLine("some text"));
 
-        parser.parseString(someText);
-        verify(handler, times(2)).onOutLine(someText);
-
-        parser.parseString("[ RUN      ] Neutrino.HasMass");
-        verify(handler).onTestState(TestRunState.RUNNING, "Neutrino.HasMass");
+        assertEquals(parser.parseOutputLine("[ RUN      ] Neutrino.HasMass"),
+                buildResult("Neutrino.HasMass", TestRunState.RUNNING));
 
         // Starting a new test before finishing the previous one has no effect.
-        parser.parseString("[ RUN      ] Neutrino.HasMass");
-        verify(handler, times(1)).onTestState(TestRunState.RUNNING, "Neutrino.HasMass");
+        assertNull(parser.parseOutputLine("[ RUN      ] Neutrino.HasMass"));
 
-        parser.parseString("[       OK ] Neutrino.HasMass (0 ms)");
-        verify(handler).onTestState(TestRunState.OK, "Neutrino.HasMass");
+        assertNull(parser.parseOutputLine("another text"));
 
-        parser.parseString("[ RUN      ] Neutrino.IsStable");
-        verify(handler).onTestState(TestRunState.RUNNING, "Neutrino.IsStable");
+        assertEquals(parser.parseOutputLine("[       OK ] Neutrino.HasMass (0 ms)"),
+                buildResult("Neutrino.HasMass", TestRunState.OK));
 
-        parser.parseString("[  FAILED  ] Neutrino.IsStable (0 ms)");
-        verify(handler).onTestState(TestRunState.FAILED, "Neutrino.IsStable");
+        assertEquals(parser.parseOutputLine("[ RUN      ] Neutrino.IsStable"),
+                buildResult("Neutrino.IsStable", TestRunState.RUNNING));
+
+        assertEquals(parser.parseOutputLine("[  FAILED  ] Neutrino.IsStable (0 ms)"),
+                buildResult("Neutrino.IsStable", TestRunState.FAILED));
+    }
+
+    private TestOutputParser.Result buildResult(final String testName, final TestRunState testState) {
+        return new TestOutputParser.Result(testName, testState);
     }
 
     @Test
     public void testParseTestList() throws Exception {
-        final TestEventHandler handler = mock(TestEventHandler.class);
-        final TestOutputParser parser = new TestOutputParser(handler);
+        final TestOutputParser parser = new TestOutputParser();
 
         final String neutrinoTestListString =
                 "Running main() from gtest_main.cc\n" +
@@ -74,15 +71,14 @@ public class TestOutputParserTest {
         assertEquals(neutralinoExpected, neutralinoActual);
     }
 
-    @Test(expected=ParseException.class)
+    @Test(expected = ParseException.class)
     public void testParseException() throws ParseException {
         final String garbage =
                 "Running main() from gtest_main.cc\n" +
                         "Neutralino\n" +
                         " --a\n";
 
-        final TestEventHandler handler = mock(TestEventHandler.class);
-        final TestOutputParser parser = new TestOutputParser(handler);
+        final TestOutputParser parser = new TestOutputParser();
         parser.parseTestList(Arrays.asList(garbage.split("\n")));
     }
 }
