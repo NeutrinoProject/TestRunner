@@ -1,5 +1,6 @@
 package com.neutrinoproject.testrunner.ui;
 
+import com.neutrinoproject.testrunner.TestExecutorService;
 import com.neutrinoproject.testrunner.TestRunState;
 import org.jetbrains.annotations.Nullable;
 
@@ -38,9 +39,14 @@ public class MainForm implements TestRunnerHandler {
     private JProgressBar progressBar;
 
     private TestRunnerModel testRunnerModel;
+    private TestExecutorService testExecutorService;
 
     public void setTestRunnerModel(final TestRunnerModel testRunnerModel) {
         this.testRunnerModel = testRunnerModel;
+    }
+
+    public void setTestExecutorService(final TestExecutorService testExecutorService) {
+        this.testExecutorService = testExecutorService;
     }
 
     public void initForm() {
@@ -52,7 +58,7 @@ public class MainForm implements TestRunnerHandler {
         mainFrame.setTitle("TestRunner");
         mainFrame.setSize(600, 600);
         mainFrame.setLocationRelativeTo(null);
-//        mainFrame.pack();
+        mainFrame.pack();
 
         rawOutputArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, rawOutputArea.getFont().getSize()));
         runAllTestsButton.setEnabled(false);
@@ -69,62 +75,8 @@ public class MainForm implements TestRunnerHandler {
         SwingUtilities.invokeLater(() -> mainFrame.setVisible(true));
     }
 
-    private void onLoadTestBinary(final ActionEvent event) {
-        final JFileChooser fileChooser = new JFileChooser();
-        final int returnVal = fileChooser.showOpenDialog(mainFrame);
-        if (returnVal == JFileChooser.APPROVE_OPTION) {
-            final String path = fileChooser.getSelectedFile().getPath();
-            testBinaryPathField.setText(path);
-            setLoadingProgress(true);
-            statusLabel.setText("Loading binary...");
-            rawOutputArea.setText(null);
-            testOutputTable.setModel(new DefaultTableModel());
-
-            testRunnerModel.startReadingBinary(path);
-        }
-    }
-
-    private void onRunAllTests(final ActionEvent event) {
-        setLoadingProgress(true);
-        statusLabel.setText("Running tests...");
-        rawOutputArea.setText(null);
-        getStreamOfTestResultTableRows().forEach(tableRow -> tableRow.setTestRunState("Queued"));
-
-        testRunnerModel.startAllTests();
-    }
-
-    private void onRunFailedTests(final ActionEvent event) {
-        setLoadingProgress(true);
-        statusLabel.setText("Running tests...");
-        rawOutputArea.setText(null);
-
-        final java.util.List<String> failedTestNames = getStreamOfTestResultTableRows()
-                .peek(tableRow -> tableRow.setTestRunState(""))
-                .filter(tableRow -> tableRow.testRunState.equals(TestRunState.FAILED.toString()))
-                .peek(tableRow -> tableRow.setTestRunState("Queued"))
-                .map(tableRow -> tableRow.testName).collect(toList());
-
-        testRunnerModel.startTests(failedTestNames);
-    }
-
-    private void onStop(final ActionEvent event) {
-        testRunnerModel.stopAllProcesses();
-        setLoadingProgress(false);
-        statusLabel.setText("Stopped");
-    }
-
-    private void setLoadingProgress(boolean loading) {
-        if (loading) {
-            runAllTestsButton.setEnabled(false);
-            runFailedButton.setEnabled(false);
-        }
-        loadTestBinaryButton.setEnabled(!loading);
-        stopButton.setEnabled(loading);
-//        progressBar.setValue(loading ? progressBar.getMinimum() : progressBar.getMaximum());
-    }
-
     @Override
-    public void onTestsLoadingFinished(final boolean success) {
+    public void onTestsLoadingFinished(final boolean success, final Collection<String> testNames) {
         SwingUtilities.invokeLater(() -> {
             final String[] columnNames = {"State", "Test Name"};
             final DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
@@ -140,8 +92,7 @@ public class MainForm implements TestRunnerHandler {
             testOutputTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
             if (success) {
-                final Stream<String> testNameStream = testRunnerModel.getTestNames().stream();
-                testNameStream.forEach(testName -> tableModel.addRow(new Object[]{"", testName}));
+                testNames.stream().forEach(testName -> tableModel.addRow(new Object[]{"", testName}));
                 runAllTestsButton.setEnabled(true);
                 statusLabel.setText("Binary loaded");
             } else {
@@ -149,6 +100,10 @@ public class MainForm implements TestRunnerHandler {
             }
             setLoadingProgress(false);
         });
+    }
+
+    @Override
+    public void onTestRunStart() {
     }
 
     @Override
@@ -187,6 +142,72 @@ public class MainForm implements TestRunnerHandler {
         });
     }
 
+    private void onLoadTestBinary(final ActionEvent event) {
+        final JFileChooser fileChooser = new JFileChooser();
+        final int returnVal = fileChooser.showOpenDialog(mainFrame);
+        if (returnVal == JFileChooser.APPROVE_OPTION) {
+            final String path = fileChooser.getSelectedFile().getPath();
+            testBinaryPathField.setText(path);
+            setLoadingProgress(true);
+            statusLabel.setText("Loading binary...");
+            rawOutputArea.setText(null);
+            testOutputTable.setModel(new DefaultTableModel());
+
+            testExecutorService.submitReadBinary(path);
+        }
+    }
+
+    private void onRunAllTests(final ActionEvent event) {
+        setLoadingProgress(true);
+        statusLabel.setText("Running tests...");
+        rawOutputArea.setText(null);
+        getStreamOfTestResultTableRows().forEach(tableRow -> tableRow.setTestRunState("Queued"));
+
+        testExecutorService.submitTestRun(testBinaryPathField.getText(), Collections.emptyList());
+    }
+
+    private void onRunFailedTests(final ActionEvent event) {
+        setLoadingProgress(true);
+        statusLabel.setText("Running tests...");
+        rawOutputArea.setText(null);
+
+        final java.util.List<String> failedTestNames = getStreamOfTestResultTableRows()
+                .peek(tableRow -> tableRow.setTestRunState(""))
+                .filter(tableRow -> tableRow.testRunState.equals(TestRunState.FAILED.toString()))
+                .peek(tableRow -> tableRow.setTestRunState("Queued"))
+                .map(tableRow -> tableRow.testName).collect(toList());
+
+        testExecutorService.submitTestRun(testBinaryPathField.getText(), failedTestNames);
+    }
+
+    private void onStop(final ActionEvent event) {
+        testExecutorService.stop();
+        setLoadingProgress(false);
+        statusLabel.setText("Stopped");
+    }
+
+    private void setLoadingProgress(boolean loading) {
+        if (loading) {
+            runAllTestsButton.setEnabled(false);
+            runFailedButton.setEnabled(false);
+        }
+        loadTestBinaryButton.setEnabled(!loading);
+        stopButton.setEnabled(loading);
+//        progressBar.setValue(loading ? progressBar.getMinimum() : progressBar.getMaximum());
+    }
+
+    private Stream<TableRow> getStreamOfTestResultTableRows() {
+        final AtomicInteger index = new AtomicInteger(0);
+        final TableModel tableModel = testOutputTable.getModel();
+        Supplier<TableRow> supplier = () -> {
+            final int localIndex = index.getAndIncrement();
+            return new TableRow((String) tableModel.getValueAt(localIndex, 0),
+                    (String) tableModel.getValueAt(localIndex, 1),
+                    localIndex);
+        };
+        return Stream.generate(supplier).limit(tableModel.getRowCount());
+    }
+
     private class TableRow {
         public String testRunState;
         public String testName;
@@ -201,17 +222,5 @@ public class MainForm implements TestRunnerHandler {
         public void setTestRunState(final String state) {
             testOutputTable.getModel().setValueAt(state, index, 0);
         }
-    }
-
-    private Stream<TableRow> getStreamOfTestResultTableRows() {
-        final AtomicInteger index = new AtomicInteger(0);
-        final TableModel tableModel = testOutputTable.getModel();
-        Supplier<TableRow> supplier = () -> {
-            final int localIndex = index.getAndIncrement();
-            return new TableRow((String) tableModel.getValueAt(localIndex, 0),
-                    (String) tableModel.getValueAt(localIndex, 1),
-                    localIndex);
-        };
-        return Stream.generate(supplier).limit(tableModel.getRowCount());
     }
 }

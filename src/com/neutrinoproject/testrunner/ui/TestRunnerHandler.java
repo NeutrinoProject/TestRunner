@@ -3,6 +3,8 @@ package com.neutrinoproject.testrunner.ui;
 import com.neutrinoproject.testrunner.TestRunState;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
+
 /**
  * Created by btv on 07.12.15.
  */
@@ -11,8 +13,14 @@ public interface TestRunnerHandler {
     /**
      * Callback method is called on finishing loading of a test binary.
      * @param success an indicator whether loading succeed or not
+     * @param testNames a list of test names read from the test binary
      */
-    void onTestsLoadingFinished(boolean success);
+    void onTestsLoadingFinished(boolean success, final Collection<String> testNames);
+
+    /**
+     * Callback method is called on starting test run.
+     */
+    void onTestRunStart();
 
     /**
      * Callback method is called on a new line from out or err stream of a test binary.

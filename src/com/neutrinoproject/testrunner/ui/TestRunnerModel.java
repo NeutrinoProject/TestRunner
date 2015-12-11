@@ -12,33 +12,6 @@ import java.util.Optional;
 public interface TestRunnerModel {
 
     /**
-     * Non blocking call starts reading a test binary.
-     * {@code TestRunnerHandler.onTestsLoadingFinished} will be called after loading the test binary.
-     * @param testBinaryPath a path to a test binary to read
-     */
-    void startReadingBinary(String testBinaryPath);
-
-    /**
-     * Non blocking call starts all test from the loaded test binary.
-     * {@code TestRunnerHandler.onOutputLine}, {@code TestRunnerHandler.onTestStateChange},
-     * {@code TestRunnerHandler.onTestRunFinished} will be called during it's execution.
-     */
-    void startAllTests();
-
-    /**
-     * Non blocking call starts tests specified in {@code testNames} from the loaded test binary.
-     * {@code TestRunnerHandler.onOutputLine}, {@code TestRunnerHandler.onTestStateChange},
-     * {@code TestRunnerHandler.onTestRunFinished} will be called during it's execution.
-     * @param testNames a list of test to run
-     */
-    void startTests(Collection<String> testNames);
-
-    /**
-     * Stops all processes run from {@code startReadingBinary}, {@code startAllTests}, and {@code startTests}.
-     */
-    void stopAllProcesses();
-
-    /**
      * Returns a list of test names existent in the loaded test binary.
      * @return a list of test names
      */
