@@ -103,4 +103,8 @@ public class TestOutputParser {
 
         return result;
     }
+
+    public void clearState() {
+        testRunState = null;
+    }
 }

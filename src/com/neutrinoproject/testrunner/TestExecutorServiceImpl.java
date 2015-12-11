@@ -28,12 +28,14 @@ public class TestExecutorServiceImpl implements TestExecutorService {
     public void submitTestRun(final String testBinaryPath, final Collection<String> testNames) {
         final String testFilterFlag = testNames.isEmpty() ? "" : "--gtest_filter=" + String.join(":", testNames);
         final String[] command = new String[]{testBinaryPath, testFilterFlag};
+        parser.clearState();
         processRunner = new ProcessRunner();
         executorService.submit(() -> runTests(command));
     }
 
     public void submitReadBinary(final String testBinaryPath) {
         final String[] command = new String[]{testBinaryPath, "--gtest_list_tests"};
+        parser.clearState();
         processRunner = new ProcessRunner();
         executorService.submit(() -> readBinary(command));
     }
@@ -80,14 +82,17 @@ public class TestExecutorServiceImpl implements TestExecutorService {
                     testOutputLineIndex = 0;
                     if (result.testState == TestRunState.RUNNING) {
                         currentTestName = result.testName;
-                    } else {
-                        currentTestName = null;
                     }
                     testRunnerHandlers.stream().forEach(handler ->
                             handler.onTestStateChange(result.testName, result.testState));
                 }
                 testRunnerHandlers.stream().forEach(handler ->
                         handler.onOutputLine(currentTestName, overallOutputLineIndex, testOutputLineIndex, line));
+
+                if (result != null && result.testState != TestRunState.RUNNING) {
+                    currentTestName = null;
+                }
+
                 ++overallOutputLineIndex;
                 if (currentTestName != null) {
                     ++testOutputLineIndex;

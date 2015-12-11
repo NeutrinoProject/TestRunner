@@ -1,6 +1,7 @@
 package com.neutrinoproject.testrunner.ui;
 
 import com.neutrinoproject.testrunner.TestRunState;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -13,6 +14,7 @@ class TestState {
     private final Collection<String> outLines = Collections.synchronizedList(new ArrayList<>());
     private TestRunState state;
 
+    @Nullable
     public TestRunState getState() {
         return state;
     }
@@ -27,5 +29,10 @@ class TestState {
 
     public void appendOutLine(final String line) {
         outLines.add(line);
+    }
+
+    public void clear() {
+        state = null;
+        outLines.clear();
     }
 }

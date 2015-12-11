@@ -20,7 +20,8 @@ public interface TestRunnerHandler {
     /**
      * Callback method is called on starting test run.
      */
-    void onTestRunStart();
+    default void onTestRunStart() {
+    }
 
     /**
      * Callback method is called on a new line from out or err stream of a test binary.
@@ -42,6 +43,7 @@ public interface TestRunnerHandler {
      * Callback method is called on finishing test run.
      * @param success an indicator whether overall test run succeed or not
      */
-    void onTestRunFinished(boolean success);
+    default void onTestRunFinished(boolean success) {
+    }
 
 }

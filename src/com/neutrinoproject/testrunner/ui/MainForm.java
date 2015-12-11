@@ -5,6 +5,8 @@ import com.neutrinoproject.testrunner.TestRunState;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 import java.awt.*;
@@ -20,6 +22,7 @@ import static java.util.stream.Collectors.toList;
  * Created by btv on 02.12.15.
  */
 public class MainForm implements TestRunnerHandler {
+    public static final String OVERALL_RESULT_ROW_NAME = "<Overall>";
     private JFrame mainFrame;
     private JPanel mainPanel;
 
@@ -40,6 +43,7 @@ public class MainForm implements TestRunnerHandler {
 
     private TestRunnerModel testRunnerModel;
     private TestExecutorService testExecutorService;
+    private String selectedTestName;
 
     public void setTestRunnerModel(final TestRunnerModel testRunnerModel) {
         this.testRunnerModel = testRunnerModel;
@@ -58,7 +62,7 @@ public class MainForm implements TestRunnerHandler {
         mainFrame.setTitle("TestRunner");
         mainFrame.setSize(600, 600);
         mainFrame.setLocationRelativeTo(null);
-        mainFrame.pack();
+//        mainFrame.pack();
 
         rawOutputArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, rawOutputArea.getFont().getSize()));
         runAllTestsButton.setEnabled(false);
@@ -69,6 +73,8 @@ public class MainForm implements TestRunnerHandler {
         runAllTestsButton.addActionListener(this::onRunAllTests);
         runFailedButton.addActionListener(this::onRunFailedTests);
         stopButton.addActionListener(this::onStop);
+
+        testOutputTable.getSelectionModel().addListSelectionListener(this::onRowSelected);
     }
 
     public void showForm() {
@@ -92,7 +98,11 @@ public class MainForm implements TestRunnerHandler {
             testOutputTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
             if (success) {
+                selectedTestName = OVERALL_RESULT_ROW_NAME;
+
+                tableModel.addRow(new Object[]{"", OVERALL_RESULT_ROW_NAME});
                 testNames.stream().forEach(testName -> tableModel.addRow(new Object[]{"", testName}));
+                testOutputTable.getSelectionModel().setSelectionInterval(0, 0);
                 runAllTestsButton.setEnabled(true);
                 statusLabel.setText("Binary loaded");
             } else {
@@ -103,15 +113,14 @@ public class MainForm implements TestRunnerHandler {
     }
 
     @Override
-    public void onTestRunStart() {
-    }
-
-    @Override
     public void onOutputLine(@Nullable final String testName, final int overallLineIndex, final int testLineIndex, final String outputLine) {
         SwingUtilities.invokeLater(() -> {
-            rawOutputArea.append(outputLine);
-            rawOutputArea.append("\n");
-            rawOutputArea.setCaretPosition(rawOutputArea.getDocument().getLength());
+            // TODO: Add comparing and incrementing index.
+            if (Objects.equals(OVERALL_RESULT_ROW_NAME, selectedTestName) || Objects.equals(testName, selectedTestName)) {
+                rawOutputArea.append(outputLine);
+                rawOutputArea.append("\n");
+                rawOutputArea.setCaretPosition(rawOutputArea.getDocument().getLength());
+            }
         });
     }
 
@@ -161,7 +170,9 @@ public class MainForm implements TestRunnerHandler {
         setLoadingProgress(true);
         statusLabel.setText("Running tests...");
         rawOutputArea.setText(null);
-        getStreamOfTestResultTableRows().forEach(tableRow -> tableRow.setTestRunState("Queued"));
+        getStreamOfTestResultTableRows()
+                .skip(1) // Skip the row for overall result
+                .forEach(tableRow -> tableRow.setTestRunState("Queued"));
 
         testExecutorService.submitTestRun(testBinaryPathField.getText(), Collections.emptyList());
     }
@@ -194,6 +205,26 @@ public class MainForm implements TestRunnerHandler {
         loadTestBinaryButton.setEnabled(!loading);
         stopButton.setEnabled(loading);
 //        progressBar.setValue(loading ? progressBar.getMinimum() : progressBar.getMaximum());
+    }
+
+    private void onRowSelected(ListSelectionEvent event) {
+        if (testOutputTable.getSelectedRow() < 0) {
+            this.selectedTestName = null;
+            return;
+        }
+        final String selectedTestName = (String) testOutputTable.getValueAt(testOutputTable.getSelectedRow(), 1);
+        if (!Objects.equals(selectedTestName, this.selectedTestName)) {
+            this.selectedTestName = selectedTestName;
+            rawOutputArea.setText(null);
+            final Collection<String> testOutput = testOutputTable.getSelectedRow() == 0
+                    ? testRunnerModel.getOverallTestOutput()
+                    : testRunnerModel.getTestOutput(selectedTestName);
+            testOutput.stream().forEach(line -> {
+                rawOutputArea.append(line);
+                rawOutputArea.append("\n");
+            });
+            rawOutputArea.setCaretPosition(rawOutputArea.getDocument().getLength());
+        }
     }
 
     private Stream<TableRow> getStreamOfTestResultTableRows() {

@@ -20,6 +20,7 @@ _GUI for Google Test Famework_
  - [ ] implement an option to run selected tests
  - [ ] show test cases in gui as a tree
  - [ ] seperate std out and std err streams, show them defferently
+ - [ ] show progress bar
 
 ## Known Issues
  - [x] test output table is editable

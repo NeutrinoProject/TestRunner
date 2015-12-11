@@ -1,6 +1,5 @@
 package com.neutrinoproject.testrunner.ui;
 
-import com.neutrinoproject.testrunner.TestExecutorService;
 import com.neutrinoproject.testrunner.TestRunState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -15,9 +14,6 @@ public class TestRunnerModelImpl implements TestRunnerModel, TestRunnerHandler {
     private final AtomicReference<Map<String, TestState>> testStateMap = new AtomicReference<>(new LinkedHashMap<>());
     private final AtomicReference<List<String>> overallOutLines =
             new AtomicReference<>(Collections.synchronizedList(new ArrayList<>()));
-
-//    testStateMap.get().clear();
-//    overallOutLines.get().clear();
 
     @NotNull
     @Override
@@ -46,17 +42,15 @@ public class TestRunnerModelImpl implements TestRunnerModel, TestRunnerHandler {
 
     @Override
     public void onTestsLoadingFinished(final boolean success, final Collection<String> testNames) {
-        if (success) {
-            final Map<String, TestState> localTestStateMap = new LinkedHashMap<>(testNames.size());
-            testNames.forEach(testName -> localTestStateMap.put(testName, new TestState()));
-            testStateMap.set(localTestStateMap);
-        }
+        final Map<String, TestState> localTestStateMap = new LinkedHashMap<>(testNames.size());
+        testNames.forEach(testName -> localTestStateMap.put(testName, new TestState()));
+        testStateMap.set(localTestStateMap);
     }
 
     @Override
     public void onTestRunStart() {
         overallOutLines.get().clear();
-        // TODO: Clean test outputs, test states in testStateMap.
+        testStateMap.get().values().stream().forEach(TestState::clear);
     }
 
     @Override
@@ -75,9 +69,5 @@ public class TestRunnerModelImpl implements TestRunnerModel, TestRunnerHandler {
         if (testState != null) {
             testState.setState(newState);
         }
-    }
-
-    @Override
-    public void onTestRunFinished(final boolean success) {
     }
 }
