@@ -9,7 +9,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="junit" level="project" />
+    <orderEntry type="library" scope="TEST" name="junit" level="project" />
     <orderEntry type="module-library" scope="TEST">
       <library name="JUnit4">
         <CLASSES>
@@ -20,7 +20,8 @@
         <SOURCES />
       </library>
     </orderEntry>
-    <orderEntry type="library" name="org.mockito:mockito-core:2.0.31-beta" level="project" />
+    <orderEntry type="library" scope="TEST" name="org.mockito:mockito-core:2.0.31-beta" level="project" />
     <orderEntry type="library" name="annotations" level="project" />
+    <orderEntry type="library" scope="TEST" name="org.assertj:assertj-swing-junit:3.0.2" level="project" />
   </component>
 </module>
