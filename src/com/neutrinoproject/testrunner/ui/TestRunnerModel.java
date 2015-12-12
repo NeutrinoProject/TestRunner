@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 /**
  * Created by btv on 07.12.15.
@@ -19,13 +20,6 @@ public interface TestRunnerModel {
     Collection<String> getTestNames();
 
     /**
-     * Returns a list of the overall test run output.
-     * @return out and err output
-     */
-    @NotNull
-    Collection<String> getOverallTestOutput();
-
-    /**
      * Returns state of particular test.
      * @param testName a name of test
      * @return test state
@@ -34,11 +28,22 @@ public interface TestRunnerModel {
     Optional<TestRunState> getTestState(String testName);
 
     /**
-     * Returns a list of specified test run output.
-     * @param testName a name of test
-     * @return out and err output
+     * An artificial name of a test representing overall test run output results.
      */
-    @NotNull
-    Collection<String> getTestOutput(String testName);
+    String OVERALL_TEST_NAME = "";
+
+    /**
+     * Subscribe to get output of a test. {@code consumer} will get all previous output of the test and will be given
+     * all subsequent output of the test.
+     * @param testName a name of the test
+     * @param consumer a consumer of the test output
+     */
+    void subscribeOnTestOutput(String testName, Consumer<String> consumer);
+
+    /**
+     * Unsubscribe all subscriber of a test output.
+     * @param testName a name of the test
+     */
+    void unsubscribeAllOnTestOutput(String testName);
 
 }

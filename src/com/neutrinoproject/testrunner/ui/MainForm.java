@@ -2,11 +2,9 @@ package com.neutrinoproject.testrunner.ui;
 
 import com.neutrinoproject.testrunner.TestExecutorService;
 import com.neutrinoproject.testrunner.TestRunState;
-import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 import java.awt.*;
@@ -102,25 +100,15 @@ public class MainForm implements TestRunnerHandler {
 
                 tableModel.addRow(new Object[]{"", OVERALL_RESULT_ROW_NAME});
                 testNames.stream().forEach(testName -> tableModel.addRow(new Object[]{"", testName}));
+                selectedTestName = null;
                 testOutputTable.getSelectionModel().setSelectionInterval(0, 0);
+                onRowSelected(null);
                 runAllTestsButton.setEnabled(true);
                 statusLabel.setText("Binary loaded");
             } else {
                 statusLabel.setText("Error");
             }
             setLoadingProgress(false);
-        });
-    }
-
-    @Override
-    public void onOutputLine(@Nullable final String testName, final int overallLineIndex, final int testLineIndex, final String outputLine) {
-        SwingUtilities.invokeLater(() -> {
-            // TODO: Add comparing and incrementing index.
-            if (Objects.equals(OVERALL_RESULT_ROW_NAME, selectedTestName) || Objects.equals(testName, selectedTestName)) {
-                rawOutputArea.append(outputLine);
-                rawOutputArea.append("\n");
-                rawOutputArea.setCaretPosition(rawOutputArea.getDocument().getLength());
-            }
         });
     }
 
@@ -214,16 +202,18 @@ public class MainForm implements TestRunnerHandler {
         }
         final String selectedTestName = (String) testOutputTable.getValueAt(testOutputTable.getSelectedRow(), 1);
         if (!Objects.equals(selectedTestName, this.selectedTestName)) {
-            this.selectedTestName = selectedTestName;
+            testRunnerModel.unsubscribeAllOnTestOutput(this.selectedTestName);
+            this.selectedTestName = selectedTestName.equals(OVERALL_RESULT_ROW_NAME)
+                    ? TestRunnerModel.OVERALL_TEST_NAME
+                    : selectedTestName;
             rawOutputArea.setText(null);
-            final Collection<String> testOutput = testOutputTable.getSelectedRow() == 0
-                    ? testRunnerModel.getOverallTestOutput()
-                    : testRunnerModel.getTestOutput(selectedTestName);
-            testOutput.stream().forEach(line -> {
-                rawOutputArea.append(line);
-                rawOutputArea.append("\n");
-            });
-            rawOutputArea.setCaretPosition(rawOutputArea.getDocument().getLength());
+            testRunnerModel.subscribeOnTestOutput(this.selectedTestName, line ->
+                SwingUtilities.invokeLater(() -> {
+                    rawOutputArea.append(line);
+                    rawOutputArea.append("\n");
+//                    rawOutputArea.setCaretPosition(rawOutputArea.getDocument().getLength());
+                })
+            );
         }
     }
 

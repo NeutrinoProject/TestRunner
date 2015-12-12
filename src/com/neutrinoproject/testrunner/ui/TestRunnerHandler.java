@@ -30,7 +30,8 @@ public interface TestRunnerHandler {
      * @param testLineIndex an index of the line of particular test run
      * @param outputLine an output line
      */
-    void onOutputLine(@Nullable String testName, int overallLineIndex, int testLineIndex, String outputLine);
+    default void onOutputLine(@Nullable String testName, int overallLineIndex, int testLineIndex, String outputLine) {
+    }
 
     /**
      * Callback method is called on changing state of a test.
