@@ -61,8 +61,7 @@ public class TestRunnerModelImpl implements TestRunnerModel, TestRunnerHandler {
     }
 
     @Override
-    public void onOutputLine(@Nullable final String testName, final int overallLineIndex, final int testLineIndex,
-                             final String outputLine) {
+    public void onOutputLine(@Nullable final String testName, final String outputLine) {
         List<Consumer<String>> forThisTestSubscribersLocal = Collections.emptyList();
         List<Consumer<String>> forOverallTestSubscribersLocal = Collections.emptyList();
         synchronized (this) {

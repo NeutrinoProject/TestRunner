@@ -26,11 +26,9 @@ public interface TestRunnerHandler {
     /**
      * Callback method is called on a new line from out or err stream of a test binary.
      * @param testName a test the line belongs
-     * @param overallLineIndex an index of the line of overall test run
-     * @param testLineIndex an index of the line of particular test run
      * @param outputLine an output line
      */
-    default void onOutputLine(@Nullable String testName, int overallLineIndex, int testLineIndex, String outputLine) {
+    default void onOutputLine(@Nullable String testName, String outputLine) {
     }
 
     /**

@@ -18,8 +18,8 @@ import java.util.function.Consumer;
 public class TestExecutorServiceImpl implements TestExecutorService {
     private final ExecutorService executorService = Executors.newFixedThreadPool(1);
     private final TestOutputParser parser = new TestOutputParser();
-    private ProcessRunner processRunner;
     private final Collection<TestRunnerHandler> testRunnerHandlers = new ArrayList<>();
+    private ProcessRunner processRunner;
 
     public void addTestRunnerHandler(final TestRunnerHandler testRunnerHandler) {
         testRunnerHandlers.add(testRunnerHandler);
@@ -71,15 +71,12 @@ public class TestExecutorServiceImpl implements TestExecutorService {
 
     private void runTests(final String[] command) {
         final Consumer<String> consumer = new Consumer<String>() {
-            private int overallOutputLineIndex = 0;
-            private int testOutputLineIndex = 0;
             private String currentTestName;
 
             @Override
             public void accept(final String line) {
                 final TestOutputParser.Result result = parser.parseOutputLine(line);
                 if (result != null) {
-                    testOutputLineIndex = 0;
                     if (result.testState == TestRunState.RUNNING) {
                         currentTestName = result.testName;
                     }
@@ -87,15 +84,10 @@ public class TestExecutorServiceImpl implements TestExecutorService {
                             handler.onTestStateChange(result.testName, result.testState));
                 }
                 testRunnerHandlers.stream().forEach(handler ->
-                        handler.onOutputLine(currentTestName, overallOutputLineIndex, testOutputLineIndex, line));
+                        handler.onOutputLine(currentTestName, line));
 
                 if (result != null && result.testState != TestRunState.RUNNING) {
                     currentTestName = null;
-                }
-
-                ++overallOutputLineIndex;
-                if (currentTestName != null) {
-                    ++testOutputLineIndex;
                 }
             }
         };
