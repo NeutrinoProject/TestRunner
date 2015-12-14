@@ -68,6 +68,7 @@ public class MainFormTest {
                                 handler.onTestStateChange(testName, TestRunState.OK));
                     });
                     testRunnerHandlers.stream().forEach(handler -> handler.onOutputLine(null, "Overall output end"));
+                    testRunnerHandlers.stream().forEach(handler -> handler.onTestRunFinished(true));
                     break;
 
                 case FAILED_TEST_BINARY:
@@ -79,6 +80,7 @@ public class MainFormTest {
                                 handler.onOutputLine(testName, "Success"));
                         testRunnerHandlers.stream().forEach(handler ->
                                 handler.onTestStateChange(testName, TestRunState.OK));
+                        testRunnerHandlers.stream().forEach(handler -> handler.onTestRunFinished(true));
                     } else {
                         testRunnerHandlers.stream().forEach(handler -> handler.onOutputLine(null, "Overall output begin"));
 
@@ -97,11 +99,11 @@ public class MainFormTest {
                                     handler.onTestStateChange(testName, TestRunState.FAILED));
                         });
                         testRunnerHandlers.stream().forEach(handler -> handler.onOutputLine(null, "Overall output end"));
+                        testRunnerHandlers.stream().forEach(handler -> handler.onTestRunFinished(false));
                     }
                     break;
             }
 
-            testRunnerHandlers.stream().forEach(handler -> handler.onTestRunFinished(true));
         }
 
         @Override
@@ -194,6 +196,8 @@ public class MainFormTest {
         runAllTestsButton.click();
         runAllTestsButton.requireEnabled(Timeout.timeout(100));
 
+        window.label().requireText("OK. 3 tests passed.");
+
         final String[][] expectedContent = {
                 {"", "<Overall>"},
                 {"OK", "test1"},
@@ -239,6 +243,9 @@ public class MainFormTest {
         runAllTestsButton.requireEnabled(Timeout.timeout(100));
         runFailedTestsButton.requireEnabled();
 
+//        pause(100000);
+        window.label().requireText("FAIL. 2 tests passed, 1 test failed.");
+
         final String[][] expectedContent = {
                 {"", "<Overall>"},
                 {"OK", "test1"},
@@ -260,6 +267,8 @@ public class MainFormTest {
         runFailedTestsButton.click();
         runAllTestsButton.requireEnabled(Timeout.timeout(100));
         runFailedTestsButton.requireDisabled();
+
+        window.label().requireText("OK. 1 test passed.");
 
         final String[][] expectedContentForFailedTestRun = {
                 {"", "<Overall>"},

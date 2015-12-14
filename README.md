@@ -7,7 +7,7 @@ _GUI for Google Test Famework_
   - [x] show test results in gui as they appear
   - [x] show test output per test
  - [x] show states for test: Queued, Running, Failed, Ok
- - [ ] show overall result
+ - [x] show overall result
  - [x] implement an option to stop the process
  - [x] implement an option to rerun failed tests
 

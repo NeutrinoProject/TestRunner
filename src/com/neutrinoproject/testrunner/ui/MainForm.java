@@ -2,7 +2,6 @@ package com.neutrinoproject.testrunner.ui;
 
 import com.neutrinoproject.testrunner.TestExecutorService;
 import com.neutrinoproject.testrunner.TestRunState;
-import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
@@ -11,8 +10,10 @@ import javax.swing.table.TableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
@@ -135,13 +136,33 @@ public class MainForm implements TestRunnerHandler {
             });
 
             setLoadingProgress(false);
-            statusLabel.setText(success ? "Ok" : "Fail");
+            final Map<String, List<TableRow>> collection =
+                    getStreamOfTestResultTableRows().collect(Collectors.groupingBy(row -> row.testRunState));
+            final int okTestsCount = Optional.ofNullable(collection.get("OK")).map(List::size).orElse(0);
+            final int failedTestsCount = Optional.ofNullable(collection.get("FAILED")).map(List::size).orElse(0) +
+                    Optional.ofNullable(collection.get("Stopped")).map(List::size).orElse(0);
+
+            final String okTestStatus = okTestsCount > 0 ? okTestsCount + " " + declineByNumber(okTestsCount, "test") + " passed" : "";
+            final String failedTestStatus = failedTestsCount > 0 ? failedTestsCount + " " + declineByNumber(failedTestsCount, "test") + " failed" : "";
+            String overallStatus = (success ? "OK" : "FAIL");
+            if (!okTestStatus.isEmpty()) {
+                overallStatus += ". " + okTestStatus;
+            }
+            if (!failedTestStatus.isEmpty()) {
+                overallStatus += okTestStatus.isEmpty() ? ". " : ", ";
+            }
+            overallStatus += failedTestStatus + ".";
+            statusLabel.setText(overallStatus);
             runAllTestsButton.setEnabled(true);
 
             final boolean hasFailedTests = getStreamOfTestResultTableRows()
                     .anyMatch(tableRow -> tableRow.testRunState.equals(TestRunState.FAILED.toString()));
             runFailedButton.setEnabled(hasFailedTests);
         });
+    }
+
+    private String declineByNumber(final int count, final String word) {
+        return count == 1 ? word : word + "s";
     }
 
     private void onLoadTestBinary(final ActionEvent event) {
@@ -213,11 +234,11 @@ public class MainForm implements TestRunnerHandler {
                     : selectedTestName;
             rawOutputArea.setText(null);
             testRunnerModel.subscribeOnTestOutput(this.selectedTestName, line ->
-                SwingUtilities.invokeLater(() -> {
-                    rawOutputArea.append(line);
-                    rawOutputArea.append("\n");
+                            SwingUtilities.invokeLater(() -> {
+                                rawOutputArea.append(line);
+                                rawOutputArea.append("\n");
 //                    rawOutputArea.setCaretPosition(rawOutputArea.getDocument().getLength());
-                })
+                            })
             );
         }
     }
