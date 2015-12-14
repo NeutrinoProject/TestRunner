@@ -2,6 +2,7 @@ package com.neutrinoproject.testrunner.ui;
 
 import com.neutrinoproject.testrunner.TestExecutorService;
 import com.neutrinoproject.testrunner.TestRunState;
+import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
@@ -77,6 +78,10 @@ public class MainForm implements TestRunnerHandler {
 
     public void showForm() {
         SwingUtilities.invokeLater(() -> mainFrame.setVisible(true));
+    }
+
+    public Frame getMainFrame() {
+        return mainFrame;
     }
 
     @Override
