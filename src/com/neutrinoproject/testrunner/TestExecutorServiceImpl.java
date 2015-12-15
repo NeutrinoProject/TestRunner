@@ -5,23 +5,25 @@ import com.neutrinoproject.testrunner.ui.TestRunnerHandler;
 
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Created by btv on 11.12.15.
  */
 public class TestExecutorServiceImpl implements TestExecutorService {
+    private final static Logger LOGGER = Logger.getLogger(TestExecutorServiceImpl.class.getName());
     private final ExecutorService executorService = Executors.newFixedThreadPool(1);
     private final TestOutputParser parser = new TestOutputParser();
     private final Collection<TestRunnerHandler> testRunnerHandlers = new ArrayList<>();
     private ProcessRunner processRunner;
 
     public void addTestRunnerHandler(final TestRunnerHandler testRunnerHandler) {
+        LOGGER.fine(() -> "Adding handler: " + testRunnerHandler);
         testRunnerHandlers.add(testRunnerHandler);
     }
 
@@ -42,11 +44,13 @@ public class TestExecutorServiceImpl implements TestExecutorService {
 
     public void stop() {
         if (processRunner != null) {
+            LOGGER.info("Stopping process");
             processRunner.cancel();
         }
     }
 
     private void readBinary(final String[] command) {
+        LOGGER.fine(() -> "Starting reading binary with command: " + String.join(" ", Arrays.asList(command)));
         final Collection<String> lines = new ArrayList<>();
 
         boolean hasSucceed = false;
@@ -56,12 +60,12 @@ public class TestExecutorServiceImpl implements TestExecutorService {
             if (exitCode == 0) {
                 testNames = parser.parseTestList(lines);
                 hasSucceed = true;
+                LOGGER.fine("Reading binary process exits with normal code");
             } else {
-                // TODO: Log this problem.
+                LOGGER.warning("Reading binary process exits with " + exitCode + " code");
             }
         } catch (IOException | ParseException e) {
-            // TODO: Log this problem.
-            e.printStackTrace();
+            LOGGER.warning("Reading binary process throws exception: " + e.getMessage());
         } finally {
             for (TestRunnerHandler handler : testRunnerHandlers) {
                 handler.onTestsLoadingFinished(hasSucceed, testNames);
@@ -70,6 +74,7 @@ public class TestExecutorServiceImpl implements TestExecutorService {
     }
 
     private void runTests(final String[] command) {
+        LOGGER.fine(() -> "Starting execute tests with command: " + String.join(" ", Arrays.asList(command)));
         final Consumer<String> consumer = new Consumer<String>() {
             private String currentTestName;
 
@@ -98,12 +103,12 @@ public class TestExecutorServiceImpl implements TestExecutorService {
             final int exitCode = processRunner.start(command, consumer);
             if (exitCode == 0) {
                 hasSucceed = true;
+                LOGGER.fine("Test run exits with normal code");
             } else {
-                // TODO: Log the problem somehow.
+                LOGGER.info("Test run exits with " + exitCode + " code");
             }
         } catch (IOException e) {
-            // TODO: Log the problem somehow.
-            e.printStackTrace();
+            LOGGER.warning("Test run process throws exception: " + e.getMessage());
         } finally {
             for (TestRunnerHandler handler : testRunnerHandlers) {
                 handler.onTestRunFinished(hasSucceed);

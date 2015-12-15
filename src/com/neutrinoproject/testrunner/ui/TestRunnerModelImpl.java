@@ -7,11 +7,14 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Created by btv on 02.12.15.
  */
 public class TestRunnerModelImpl implements TestRunnerModel, TestRunnerHandler {
+    private final static Logger LOGGER = Logger.getLogger(TestRunnerModelImpl.class.getName());
     private final AtomicReference<Map<String, TestState>> testStateMap = new AtomicReference<>(new LinkedHashMap<>());
     private final List<String> overallOutLines = Collections.synchronizedList(new ArrayList<>());
     private final HashMap<String, List<Consumer<String>>> subscribers = new HashMap<>();
@@ -30,6 +33,7 @@ public class TestRunnerModelImpl implements TestRunnerModel, TestRunnerHandler {
 
     @Override
     public void subscribeOnTestOutput(final String testName, final Consumer<String> consumer) {
+        LOGGER.fine(() -> "Subscribing: " + consumer + " for test: " + testName);
         Collection<String> testOutput;
         synchronized (this) {
             subscribers.computeIfAbsent(testName, k -> new ArrayList<>()).add(consumer);
@@ -40,6 +44,7 @@ public class TestRunnerModelImpl implements TestRunnerModel, TestRunnerHandler {
 
     @Override
     public void unsubscribeAllOnTestOutput(final String testName) {
+        LOGGER.fine(() -> "Unsubscribing everyone from test: " + testName);
         synchronized (this) {
             subscribers.remove(testName);
         }
@@ -48,6 +53,11 @@ public class TestRunnerModelImpl implements TestRunnerModel, TestRunnerHandler {
     // Methods for TestRunnerHandler.
     @Override
     public void onTestsLoadingFinished(final boolean success, final Collection<String> testNames) {
+        if (success) {
+            LOGGER.fine(() -> "Test loading finished, available tests: " + String.join(", ", testNames));
+        } else {
+            LOGGER.warning("Test loading failed");
+        }
         final Map<String, TestState> localTestStateMap = new LinkedHashMap<>(testNames.size());
         testNames.forEach(testName -> localTestStateMap.put(testName, new TestState()));
         testStateMap.set(localTestStateMap);
@@ -56,6 +66,7 @@ public class TestRunnerModelImpl implements TestRunnerModel, TestRunnerHandler {
 
     @Override
     public void onTestRunStart() {
+        LOGGER.fine("Starting test run");
         overallOutLines.clear();
         testStateMap.get().values().stream().forEach(TestState::clear);
     }
@@ -84,6 +95,7 @@ public class TestRunnerModelImpl implements TestRunnerModel, TestRunnerHandler {
 
     @Override
     public void onTestStateChange(final String testName, final TestRunState newState) {
+        LOGGER.fine(() -> "Test: " + testName + " changes state to: " + newState);
         final TestState testState = testStateMap.get().get(testName);
         if (testState != null) {
             testState.setState(newState);
@@ -97,5 +109,10 @@ public class TestRunnerModelImpl implements TestRunnerModel, TestRunnerHandler {
         }
         final TestState testState = testStateMap.get().get(testName);
         return Optional.ofNullable(testState).map(TestState::getOutLines).orElse(Collections.emptyList());
+    }
+
+    @Override
+    public void onTestRunFinished(final boolean success) {
+        LOGGER.fine(() -> "Test run finished " + (success ? "successfully" : "unsuccessfully"));
     }
 }

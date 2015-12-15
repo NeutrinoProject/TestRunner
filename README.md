@@ -12,8 +12,8 @@ _GUI for Google Test Famework_
  - [x] implement an option to rerun failed tests
 
 ### Debt
- - [ ] check the program on Windows
- - [ ] add proper logging
+ - [x] basic check the program on Windows
+ - [x] add proper logging
  - [ ] replace '\n' by platform independent code
 
 ### Optional
