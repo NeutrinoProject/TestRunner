@@ -136,22 +136,7 @@ public class MainForm implements TestRunnerHandler {
             });
 
             setLoadingProgress(false);
-            final Map<String, List<TableRow>> collection =
-                    getStreamOfTestResultTableRows().collect(Collectors.groupingBy(row -> row.testRunState));
-            final int okTestsCount = Optional.ofNullable(collection.get("OK")).map(List::size).orElse(0);
-            final int failedTestsCount = Optional.ofNullable(collection.get("FAILED")).map(List::size).orElse(0) +
-                    Optional.ofNullable(collection.get("Stopped")).map(List::size).orElse(0);
-
-            final String okTestStatus = okTestsCount > 0 ? okTestsCount + " " + declineByNumber(okTestsCount, "test") + " passed" : "";
-            final String failedTestStatus = failedTestsCount > 0 ? failedTestsCount + " " + declineByNumber(failedTestsCount, "test") + " failed" : "";
-            String overallStatus = (success ? "OK" : "FAIL");
-            if (!okTestStatus.isEmpty()) {
-                overallStatus += ". " + okTestStatus;
-            }
-            if (!failedTestStatus.isEmpty()) {
-                overallStatus += okTestStatus.isEmpty() ? ". " : ", ";
-            }
-            overallStatus += failedTestStatus + ".";
+            String overallStatus = getOverallStatusMessage(success);
             statusLabel.setText(overallStatus);
             runAllTestsButton.setEnabled(true);
 
@@ -159,6 +144,33 @@ public class MainForm implements TestRunnerHandler {
                     .anyMatch(tableRow -> tableRow.testRunState.equals(TestRunState.FAILED.toString()));
             runFailedButton.setEnabled(hasFailedTests);
         });
+    }
+
+    private String getOverallStatusMessage(final boolean success) {
+        final Map<String, List<TableRow>> collection =
+                getStreamOfTestResultTableRows().collect(Collectors.groupingBy(row -> row.testRunState));
+        final int okTestsCount = Optional.ofNullable(collection.get("OK")).map(List::size).orElse(0);
+        final int failedTestsCount = Optional.ofNullable(collection.get("FAILED")).map(List::size).orElse(0);
+        final int stoppedTestsCount = Optional.ofNullable(collection.get("Stopped")).map(List::size).orElse(0);
+
+        final String okTestStatus = okTestsCount > 0
+                ? okTestsCount + " " + declineByNumber(okTestsCount, "test") + " passed"
+                : "";
+        final String failedTestStatus = failedTestsCount > 0
+                ? failedTestsCount + " " + declineByNumber(failedTestsCount, "test") + " failed"
+                : "";
+        final String stoppedTestsStatus = stoppedTestsCount > 0
+                ? stoppedTestsCount + " " + declineByNumber(stoppedTestsCount, "test") + " stopped"
+                : "";
+
+        final String[] messages  = Stream.of(okTestStatus, failedTestStatus, stoppedTestsStatus)
+                .filter(s -> !s.isEmpty()).toArray(String[]::new);
+        final String summaryMessage = String.join(", ", messages);
+        String overallStatus = (success ? "OK." : "FAIL.");
+        if (!summaryMessage.isEmpty()) {
+            overallStatus += " " + summaryMessage + ".";
+        }
+        return overallStatus;
     }
 
     private String declineByNumber(final int count, final String word) {
